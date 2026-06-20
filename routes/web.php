@@ -1,0 +1,354 @@
+<?php
+
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminResumeController;
+use App\Http\Controllers\ApplicationsController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportsController;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+Route::get('/', function () {
+    if (Auth::check()) {
+        $role = strtolower((string) Auth::user()->role);
+        return match ($role) {
+            'admin' => redirect()->route('admin.dashboard'),
+            'staff' => redirect()->route('staff.dashboard'),
+            'establishment' => redirect()->route('establishment.dashboard'),
+            'job_seeker' => redirect()->route('jobseeker.dashboard'),
+            'baranggay' => redirect()->route('baranggay.dashboard'),
+            default => redirect()->route('jobseeker.dashboard'),
+        };
+    }
+
+    return redirect('/peso-login');
+});
+
+Route::get('/peso', function () {
+    Auth::logout();
+    session()->invalidate();
+    session()->regenerateToken();
+
+    return redirect()->route('peso.login');
+})->name('peso');
+
+// Route to clear all session data
+Route::get('/clear-session', function () {
+    session()->flush();
+    return "Session cleared. Redirecting to login... <script>setTimeout(() => window.location.href='/peso-login', 2000);</script>";
+});
+
+// Debug route to check authentication status
+Route::get('/debug-auth', function () {
+    return [
+        'authenticated' => auth()->check(),
+        'user' => auth()->user() ? [
+            'id' => auth()->user()->id,
+            'name' => auth()->user()->name,
+            'email' => auth()->user()->email,
+            'role' => auth()->user()->role,
+        ] : null,
+        'session_id' => session()->getId(),
+        'intended_url' => session()->get('url.intended'),
+        'all_session_data' => session()->all(),
+    ];
+});
+
+Route::get('/dashboard', function () {
+    $role = strtolower((string) (auth()->user()?->role ?? ''));
+
+    return match ($role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'staff' => redirect()->route('staff.dashboard'),
+        'establishment' => redirect()->route('establishment.dashboard'),
+        'job_seeker' => redirect()->route('jobseeker.dashboard'),
+        'baranggay' => redirect()->route('baranggay.dashboard'),
+        default => redirect()->route('jobseeker.dashboard'),
+    };
+})->middleware(['auth'])->name('dashboard');
+
+// PESO Admin Routes
+Route::get('peso-login', function () {
+    if (Auth::check()) {
+        $role = strtolower((string) Auth::user()->role);
+        return match ($role) {
+            'admin' => redirect()->route('admin.dashboard'),
+            'staff' => redirect()->route('staff.dashboard'),
+            'establishment' => redirect()->route('establishment.dashboard'),
+            'job_seeker' => redirect()->route('jobseeker.dashboard'),
+            'baranggay' => redirect()->route('baranggay.dashboard'),
+            default => redirect()->route('jobseeker.dashboard'),
+        };
+    }
+
+    return app(AdminController::class)->loginCreate();
+})->name('peso.login');
+
+Route::middleware('guest')->group(function () {
+    Route::post('peso-login', [AdminController::class, 'loginStore']);
+});
+
+Route::get('peso-register', function () {
+    if (Auth::check()) {
+        return redirect()->route('jobseeker.dashboard');
+    }
+    return app(AdminController::class)->registerCreate();
+})->name('peso.register');
+
+
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
+        ->name('admin.dashboard');
+    Route::get('/admin/jobseekers', [AdminController::class, 'jobseekers'])
+        ->name('admin.jobseekers');
+    Route::post('/admin/jobseekers', [AdminController::class, 'storeJobSeeker'])
+        ->name('admin.jobseekers.store');
+    Route::get('/admin/establishments', [AdminController::class, 'establishments'])
+        ->name('admin.establishments');
+    Route::post('/admin/establishments', [AdminController::class, 'storeEstablishment'])
+        ->name('admin.establishments.store');
+    Route::get('/admin/job-vacancies', [AdminController::class, 'jobVacancies'])
+        ->name('admin.jobvacancies');
+    Route::post('/admin/job-vacancies', [AdminController::class, 'storeJobVacancy'])
+        ->name('admin.jobvacancies.store');
+    Route::get('/admin/applications', [AdminController::class, 'applications'])
+        ->name('admin.applications');
+    Route::post('/admin/applications', [AdminController::class, 'storeApplication'])
+        ->name('admin.applications.store');
+
+    Route::get('/admin/hiring-statuses', [AdminController::class, 'hiringStatuses'])
+        ->name('admin.hiring-statuses');
+    Route::post('/admin/hiring-statuses', [AdminController::class, 'storeHiringStatus'])
+        ->name('admin.hiring-statuses.store');
+
+    Route::get('/admin/map', [AdminController::class, 'map'])
+        ->name('admin.map');
+    Route::get('/admin/gis-map', [AdminController::class, 'gisMap'])
+        ->name('admin.gismap');
+
+    Route::get('/admin/user-management', [AdminController::class, 'userManagement'])
+        ->name('admin.user-management');
+    Route::post('/admin/user-management', [AdminController::class, 'storeUserAccount'])
+        ->name('admin.user-management.store');
+
+    // Reports Routes
+    Route::get('/admin/reports', [ReportsController::class, 'index'])
+        ->name('admin.reports');
+    Route::get('/api/reports/statistics', [ReportsController::class, 'getStatistics']);
+    Route::get('/api/reports/monthly-applications', [ReportsController::class, 'getMonthlyApplications']);
+    Route::get('/api/reports/hiring-distribution', [ReportsController::class, 'getHiringStatusDistribution']);
+    Route::get('/api/reports/employment-growth', [ReportsController::class, 'getEmploymentGrowth']);
+    Route::get('/api/reports/filter', [ReportsController::class, 'getFilteredReports']);
+    Route::get('/api/reports/export/pdf', [ReportsController::class, 'exportPdf']);
+    Route::get('/api/reports/export/excel', [ReportsController::class, 'exportExcel']);
+    Route::get('/api/reports/export/csv', [ReportsController::class, 'exportCsv']);
+    Route::post('/api/reports/generate', [ReportsController::class, 'generateReport']);
+    
+    // Additional API routes for filters
+    Route::get('/api/barangays', function () {
+        return response()->json(\App\Models\Barangay::orderBy('name')->get());
+    });
+    Route::get('/api/establishments', function () {
+        return response()->json(\App\Models\Establishment::orderBy('company_name')->get());
+    });
+
+    // Establishment Locations API (session-based auth for admin dashboard)
+    Route::get('/api/establishments/locations', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'index']);
+    Route::post('/api/establishments/locations', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'store']);
+    Route::put('/api/establishments/locations/{id}', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'update']);
+    Route::delete('/api/establishments/locations/{id}', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'destroy']);
+    Route::get('/api/establishments/locations/categories', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'categories']);
+    Route::post('/api/establishments/locations/nearby', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'nearby']);
+
+    // GIS Module API
+    Route::get('/api/gis/data', [\App\Http\Controllers\Api\GisDataController::class, 'index']);
+    Route::get('/api/gis/barangay-stats', [\App\Http\Controllers\Api\GisDataController::class, 'barangayStats']);
+
+    // Resume Management
+    Route::get('/admin/resumes', [AdminResumeController::class, 'index'])
+        ->name('admin.resumes');
+    Route::post('/admin/resumes/generate', [AdminResumeController::class, 'generate'])
+        ->name('admin.resumes.generate');
+    Route::post('/admin/resumes/{resume}/regenerate', [AdminResumeController::class, 'regenerate'])
+        ->name('admin.resumes.regenerate');
+    Route::get('/admin/resumes/{resume}/download', [AdminResumeController::class, 'download'])
+        ->name('admin.resumes.download');
+    Route::delete('/admin/resumes/{resume}', [AdminResumeController::class, 'delete'])
+        ->name('admin.resumes.delete');
+
+    // Applications Management Routes
+    Route::get('/admin/applications-management', [ApplicationsController::class, 'index'])
+        ->name('admin.applications-management');
+    Route::get('/admin/applications/{id}', [ApplicationsController::class, 'show'])
+        ->name('admin.applications.show');
+    Route::put('/admin/applications/{id}/status', [ApplicationsController::class, 'updateStatus'])
+        ->name('admin.applications.update-status');
+    Route::get('/admin/applications/{id}/download-resume', [ApplicationsController::class, 'downloadResume'])
+        ->name('admin.applications.download-resume');
+    Route::delete('/admin/applications/{id}', [ApplicationsController::class, 'destroy'])
+        ->name('admin.applications.destroy');
+});
+
+Route::middleware(['auth', 'staff'])->group(function () {
+    Route::get('/staff/dashboard', function () {
+        return Inertia::render('Staff/Dashboard');
+    })->name('staff.dashboard');
+});
+
+// Establishment Authentication Routes
+Route::get('establishment/login', function () {
+    if (Auth::check()) {
+        $role = strtolower((string) Auth::user()->role);
+        if ($role === 'establishment') {
+            return redirect()->route('establishment.dashboard');
+        }
+        Auth::logout();
+        session()->invalidate();
+        session()->regenerateToken();
+    }
+
+    return app(App\Http\Controllers\EstablishmentController::class)->loginCreate();
+})->name('establishment.login');
+
+Route::middleware('guest')->group(function () {
+    Route::post('establishment/login', [App\Http\Controllers\EstablishmentController::class, 'loginStore']);
+});
+
+Route::middleware(['auth', 'establishment'])->group(function () {
+    Route::get('/establishment/dashboard', [App\Http\Controllers\EstablishmentController::class, 'dashboard'])
+        ->name('establishment.dashboard');
+    Route::get('/establishment/jobs', [App\Http\Controllers\EstablishmentController::class, 'jobs'])
+        ->name('establishment.jobs');
+    Route::post('/establishment/jobs', [App\Http\Controllers\EstablishmentController::class, 'storeJob'])
+        ->name('establishment.jobs.store');
+    Route::put('/establishment/jobs/{job}', [App\Http\Controllers\EstablishmentController::class, 'updateJob'])
+        ->name('establishment.jobs.update');
+    Route::delete('/establishment/jobs/{job}', [App\Http\Controllers\EstablishmentController::class, 'deleteJob'])
+        ->name('establishment.jobs.delete');
+    Route::post('/establishment/jobs/{job}/status', [App\Http\Controllers\EstablishmentController::class, 'updateJobStatus'])
+        ->name('establishment.jobs.status');
+    Route::get('/establishment/applicants', [App\Http\Controllers\EstablishmentController::class, 'applicants'])
+        ->name('establishment.applicants');
+    Route::put('/establishment/applicants/{application}', [App\Http\Controllers\EstablishmentController::class, 'updateApplication'])
+        ->name('establishment.applicants.update');
+    Route::get('/establishment/hiring-status', [App\Http\Controllers\EstablishmentController::class, 'hiringStatus'])
+        ->name('establishment.hiring-status');
+    Route::get('/establishment/reports', [App\Http\Controllers\EstablishmentController::class, 'reports'])
+        ->name('establishment.reports');
+    Route::get('/establishment/reports/export/pdf', [App\Http\Controllers\EstablishmentController::class, 'exportPdf'])
+        ->name('establishment.reports.export.pdf');
+    Route::get('/establishment/reports/export/excel', [App\Http\Controllers\EstablishmentController::class, 'exportExcel'])
+        ->name('establishment.reports.export.excel');
+    Route::get('/establishment/notifications', [App\Http\Controllers\EstablishmentController::class, 'notifications'])
+        ->name('establishment.notifications');
+    Route::get('/establishment/settings', [App\Http\Controllers\EstablishmentController::class, 'settings'])
+        ->name('establishment.settings');
+    Route::get('/establishment/profile', [App\Http\Controllers\EstablishmentController::class, 'profile'])
+        ->name('establishment.profile');
+    Route::put('/establishment/profile', [App\Http\Controllers\EstablishmentController::class, 'updateProfile'])
+        ->name('establishment.profile.update');
+    Route::post('/establishment/logout', [App\Http\Controllers\EstablishmentController::class, 'logout'])
+        ->name('establishment.logout');
+});
+
+Route::middleware(['auth', 'job_seeker'])->group(function () {
+    Route::get('/jobseeker/dashboard', function () {
+        return Inertia::render('JobSeeker/Dashboard');
+    })->name('jobseeker.dashboard');
+
+    Route::get('/jobseeker/resume', function () {
+        $user = Auth::user();
+        $jobSeeker = \App\Models\JobSeeker::with(['barangay'])->where('user_id', $user->id)->first();
+
+        if (!$jobSeeker) {
+            return redirect()->route('jobseeker.dashboard')->with('error', 'Please complete your profile first.');
+        }
+
+        $resume = \App\Models\Resume::where('job_seeker_id', $jobSeeker->id)->first();
+
+        $templates = [];
+        foreach (\App\Services\ResumeService::TEMPLATES as $key => $label) {
+            $templates[] = ['key' => $key, 'label' => $label];
+        }
+
+        return Inertia::render('JobSeeker/Resume', [
+            'resume' => $resume ? $resume->load('generatedBy') : null,
+            'seekerData' => $jobSeeker,
+            'templates' => $templates,
+            'templateKeys' => array_keys(\App\Services\ResumeService::TEMPLATES),
+        ]);
+    })->name('jobseeker.resume');
+
+    Route::get('/jobseeker/map', function () {
+        $user = Auth::user();
+        $jobSeeker = \App\Models\JobSeeker::where('user_id', $user->id)->first();
+        return Inertia::render('JobSeeker/JobMap', [
+            'seekerData' => $jobSeeker,
+        ]);
+    })->name('jobseeker.map');
+
+    // Job Seeker Map API (session-based auth)
+    Route::get('/api/job-seeker/map-data', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'index']);
+    Route::get('/api/job-seeker/establishments/{id}', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'show']);
+    Route::post('/api/job-seeker/establishments/{id}/toggle-save', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'toggleSave']);
+    Route::get('/api/job-seeker/saved-list', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'savedList']);
+    Route::get('/api/job-seeker/recently-viewed', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'recentlyViewed']);
+    Route::get('/api/job-seeker/recommendations', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'recommendations']);
+    Route::get('/api/job-seeker/barangay-stats', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'barangayStats']);
+});
+
+// Barangay Authentication Routes
+Route::get('barangay/login', function () {
+    if (Auth::check()) {
+        $role = strtolower((string) Auth::user()->role);
+        if ($role === 'baranggay') {
+            return redirect()->route('baranggay.dashboard');
+        }
+        Auth::logout();
+        session()->invalidate();
+        session()->regenerateToken();
+    }
+
+    return app(App\Http\Controllers\BarangayController::class)->loginCreate();
+})->name('barangay.login');
+
+Route::middleware('guest')->group(function () {
+    Route::post('barangay/login', [App\Http\Controllers\BarangayController::class, 'loginStore']);
+});
+
+Route::middleware(['auth', 'baranggay'])->group(function () {
+    Route::get('/barangay/dashboard', [App\Http\Controllers\BarangayController::class, 'dashboard'])
+        ->name('barangay.dashboard');
+    Route::get('/barangay/job-seekers', [App\Http\Controllers\BarangayController::class, 'jobSeekers'])
+        ->name('barangay.job-seekers');
+    Route::get('/barangay/residents', [App\Http\Controllers\BarangayController::class, 'residents'])
+        ->name('barangay.residents');
+    Route::get('/barangay/job-referrals', [App\Http\Controllers\BarangayController::class, 'jobReferrals'])
+        ->name('barangay.job-referrals');
+    Route::get('/barangay/local-jobs', [App\Http\Controllers\BarangayController::class, 'localJobs'])
+        ->name('barangay.local-jobs');
+    Route::get('/barangay/reports', [App\Http\Controllers\BarangayController::class, 'reports'])
+        ->name('barangay.reports');
+    Route::get('/barangay/notifications', [App\Http\Controllers\BarangayController::class, 'notifications'])
+        ->name('barangay.notifications');
+    Route::get('/barangay/announcements', [App\Http\Controllers\BarangayController::class, 'announcements'])
+        ->name('barangay.announcements');
+    Route::get('/barangay/profile', [App\Http\Controllers\BarangayController::class, 'profile'])
+        ->name('barangay.profile');
+    Route::put('/barangay/profile', [App\Http\Controllers\BarangayController::class, 'updateProfile'])
+        ->name('barangay.profile.update');
+    Route::get('/barangay/settings', [App\Http\Controllers\BarangayController::class, 'settings'])
+        ->name('barangay.settings');
+    Route::post('/barangay/logout', [App\Http\Controllers\BarangayController::class, 'logout'])
+        ->name('barangay.logout');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+require __DIR__.'/auth.php';
