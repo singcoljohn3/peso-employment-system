@@ -30,7 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/resume/template', [ResumeController::class, 'updateTemplate']);
     Route::get('/resume/preview', [ResumeController::class, 'preview']);
     Route::get('/resume', [ResumeController::class, 'show']);
+    Route::post('/resume/generate', [ResumeController::class, 'generate']);
     Route::get('/resume/download/{resume}', [ResumeController::class, 'download']);
+    Route::get('/resume/status', [ResumeController::class, 'status']);
 
 
 });

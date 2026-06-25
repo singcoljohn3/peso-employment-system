@@ -171,12 +171,20 @@ Route::middleware(['auth', 'admin'])->group(function () {
         ->name('admin.resumes');
     Route::post('/admin/resumes/generate', [AdminResumeController::class, 'generate'])
         ->name('admin.resumes.generate');
+    Route::post('/admin/resumes/bulk-generate', [AdminResumeController::class, 'bulkGenerate'])
+        ->name('admin.resumes.bulk-generate');
     Route::post('/admin/resumes/{resume}/regenerate', [AdminResumeController::class, 'regenerate'])
         ->name('admin.resumes.regenerate');
     Route::get('/admin/resumes/{resume}/download', [AdminResumeController::class, 'download'])
         ->name('admin.resumes.download');
     Route::delete('/admin/resumes/{resume}', [AdminResumeController::class, 'delete'])
         ->name('admin.resumes.delete');
+    Route::get('/admin/resumes/validate-fields', [AdminResumeController::class, 'validateFields'])
+        ->name('admin.resumes.validate-fields');
+    Route::get('/admin/resumes/preview', [AdminResumeController::class, 'preview'])
+        ->name('admin.resumes.preview');
+    Route::get('/admin/resumes/logs', [AdminResumeController::class, 'logs'])
+        ->name('admin.resumes.logs');
 
     // Applications Management Routes
     Route::get('/admin/applications-management', [ApplicationsController::class, 'index'])
@@ -268,13 +276,18 @@ Route::middleware(['auth', 'job_seeker'])->group(function () {
 
         $resume = \App\Models\Resume::where('job_seeker_id', $jobSeeker->id)->first();
 
+        if ($resume) {
+            $resume->load('generatedBy');
+            $resume->append('download_url');
+        }
+
         $templates = [];
         foreach (\App\Services\ResumeService::TEMPLATES as $key => $label) {
             $templates[] = ['key' => $key, 'label' => $label];
         }
 
         return Inertia::render('JobSeeker/Resume', [
-            'resume' => $resume ? $resume->load('generatedBy') : null,
+            'resume' => $resume,
             'seekerData' => $jobSeeker,
             'templates' => $templates,
             'templateKeys' => array_keys(\App\Services\ResumeService::TEMPLATES),

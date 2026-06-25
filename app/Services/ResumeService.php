@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
 use App\Models\JobSeeker;
 use App\Models\Resume;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ResumeService
 {
@@ -19,6 +19,51 @@ class ResumeService
         'creative' => 'Creative',
         'minimalist' => 'Minimalist',
     ];
+
+    public const REQUIRED_FIELDS = [
+        'first_name' => 'First Name',
+        'last_name' => 'Last Name',
+        'address' => 'Address',
+        'contact_number' => 'Contact Number',
+        'email' => 'Email',
+        'educational_attainment' => 'Educational Attainment',
+    ];
+
+    public function validateRequiredFields(JobSeeker $jobSeeker): array
+    {
+        $missing = [];
+        foreach (self::REQUIRED_FIELDS as $field => $label) {
+            $value = $jobSeeker->{$field} ?? null;
+            if (empty($value) && $value !== '0') {
+                $missing[$field] = $label;
+            }
+        }
+        return $missing;
+    }
+
+    public function assertValidForGeneration(JobSeeker $jobSeeker): void
+    {
+        $missing = $this->validateRequiredFields($jobSeeker);
+        if (!empty($missing)) {
+            throw ValidationException::withMessages([
+                'missing_fields' => 'Cannot generate resume. Missing required fields: ' . implode(', ', $missing),
+                'fields' => $missing,
+            ]);
+        }
+
+        if (!$jobSeeker->is_fully_registered) {
+            throw ValidationException::withMessages([
+                'registration' => 'Job seeker must be fully registered before generating a resume.',
+            ]);
+        }
+    }
+
+    private function generateResumeId(): string
+    {
+        $year = date('Y');
+        $count = Resume::whereYear('created_at', $year)->count();
+        return 'RSM-' . $year . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+    }
 
     public function buildResumeData(JobSeeker $jobSeeker): array
     {
@@ -60,6 +105,12 @@ class ResumeService
             $trainings = array_map('trim', array_filter($trainings));
         }
 
+        $licenses = [];
+        if ($jobSeeker->professional_licenses) {
+            $licenses = explode("\n", str_replace([',', ';'], "\n", $jobSeeker->professional_licenses));
+            $licenses = array_map('trim', array_filter($licenses));
+        }
+
         return [
             'first_name' => $jobSeeker->first_name ?? '',
             'middle_name' => $jobSeeker->middle_name ?? '',
@@ -81,8 +132,10 @@ class ResumeService
             'skills' => $skills,
             'certifications' => $certifications,
             'trainings' => $trainings,
+            'licenses' => $licenses,
             'barangay' => $jobSeeker->barangay?->barangay_name ?? '',
             'municipality' => 'Opol, Misamis Oriental',
+            'generated_at' => now()->format('F d, Y'),
         ];
     }
 
@@ -103,9 +156,11 @@ class ResumeService
         return $this->generateResume($jobSeeker, $admin);
     }
 
-    public function generateResume(JobSeeker $jobSeeker, User $admin, ?array $customContent = null): Resume
+    public function generateResume(JobSeeker $jobSeeker, User $admin, ?string $template = null, ?array $customContent = null): Resume
     {
-        $template = $jobSeeker->preferred_template ?? 'modern-professional';
+        $this->assertValidForGeneration($jobSeeker);
+
+        $template = $template ?? $jobSeeker->preferred_template ?? 'modern-professional';
         $data = $customContent ?? $this->buildResumeData($jobSeeker);
 
         $view = 'resumes.templates.' . $template;
@@ -118,8 +173,7 @@ class ResumeService
             'isHtml5ParserEnabled' => true,
         ]);
 
-        $resumeId = 'RSM-' . date('Y') . '-' . str_pad(Resume::whereYear('created_at', date('Y'))->count() + 1, 4, '0', STR_PAD_LEFT);
-
+        $resumeId = $this->generateResumeId();
         $filename = 'resumes/' . $resumeId . '.pdf';
         Storage::disk('public')->put($filename, $pdf->output());
 
@@ -129,22 +183,34 @@ class ResumeService
                 'resume_id' => $resumeId,
                 'template' => $template,
                 'content' => $data,
-                'status' => 'ready_for_download',
+                'status' => Resume::STATUS_GENERATED,
                 'generated_by' => $admin->id,
                 'generated_at' => now(),
                 'file_path' => $filename,
             ]
         );
 
+        ActivityLog::log(
+            'generated',
+            'resume',
+            "Resume {$resumeId} generated for {$jobSeeker->full_name}",
+            $resume,
+            ['template' => $template, 'job_seeker_id' => $jobSeeker->id],
+            $admin->id,
+        );
+
         return $resume;
     }
 
-    public function regenerateResume(Resume $resume, User $admin, ?array $customContent = null): Resume
+    public function regenerateResume(Resume $resume, User $admin, ?string $template = null, ?array $customContent = null): Resume
     {
         $jobSeeker = $resume->jobSeeker;
+        $this->assertValidForGeneration($jobSeeker);
+
+        $template = $template ?? $resume->template;
         $data = $customContent ?? $this->buildResumeData($jobSeeker);
 
-        $view = 'resumes.templates.' . $jobSeeker->preferred_template;
+        $view = 'resumes.templates.' . $template;
 
         $pdf = Pdf::loadView($view, ['data' => $data]);
         $pdf->setPaper('A4', 'portrait');
@@ -157,15 +223,57 @@ class ResumeService
         $filename = 'resumes/' . $resume->resume_id . '.pdf';
         Storage::disk('public')->put($filename, $pdf->output());
 
+        $newStatus = $resume->status === Resume::STATUS_DOWNLOADED
+            ? Resume::STATUS_UPDATED
+            : Resume::STATUS_GENERATED;
+
         $resume->update([
-            'template' => $jobSeeker->preferred_template,
+            'template' => $template,
             'content' => $data,
-            'status' => 'ready_for_download',
+            'status' => $newStatus,
             'generated_by' => $admin->id,
             'generated_at' => now(),
             'file_path' => $filename,
         ]);
 
+        ActivityLog::log(
+            'regenerated',
+            'resume',
+            "Resume {$resume->resume_id} regenerated for {$jobSeeker->full_name}",
+            $resume,
+            ['template' => $template, 'previous_status' => $resume->getOriginal('status')],
+            $admin->id,
+        );
+
         return $resume;
+    }
+
+    public function markAsDownloaded(Resume $resume): void
+    {
+        $resume->markAsDownloaded();
+
+        ActivityLog::log(
+            'downloaded',
+            'resume',
+            "Resume {$resume->resume_id} downloaded",
+            $resume,
+            ['template' => $resume->template, 'download_count' => $resume->download_count],
+        );
+    }
+
+    public function generatePreviewHtml(JobSeeker $jobSeeker, string $template): string
+    {
+        $data = $this->buildResumeData($jobSeeker);
+        $view = 'resumes.templates.' . $template;
+
+        $pdf = Pdf::loadView($view, ['data' => $data]);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'defaultFont' => 'sans-serif',
+            'isRemoteEnabled' => true,
+            'isHtml5ParserEnabled' => true,
+        ]);
+
+        return $pdf->output();
     }
 }
