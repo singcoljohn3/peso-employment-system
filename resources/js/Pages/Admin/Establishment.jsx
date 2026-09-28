@@ -1,7 +1,7 @@
-import { Head, usePage, useForm, Link } from '@inertiajs/react';
+import { Head, usePage, useForm, Link, router } from '@inertiajs/react';
 import AdminLayouts from '@/Layouts/AdminLayouts';
 import { useState } from 'react';
-import { Plus, X, MapPin, Building2, Home, Users, Phone, Mail, MapPinned, ChevronLeft, ChevronRight, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { X, MapPin, Building2, Home, Users, Phone, Mail, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 
 export default function Establishment() {
     const { establishments, barangays, region, municipality } = usePage().props;
@@ -35,8 +35,8 @@ export default function Establishment() {
         <AdminLayouts>
             <Head title="Establishments" />
             {/* Page Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
+            <div className="mb-6">
+                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200 max-w-xs">
                     <div className="flex items-center gap-4">
                         <div className="bg-blue-100 p-3 rounded-lg">
                             <Building2 className="h-6 w-6 text-blue-600" />
@@ -44,28 +44,6 @@ export default function Establishment() {
                         <div>
                             <p className="text-slate-500 text-sm">Total Establishments</p>
                             <p className="text-2xl font-bold text-slate-800">{establishments?.total || 0}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 p-3 rounded-lg">
-                            <MapPinned className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-slate-500 text-sm">Municipality</p>
-                            <p className="text-2xl font-bold text-slate-800">{municipality}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 p-3 rounded-lg">
-                            <Home className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-slate-500 text-sm">Barangays</p>
-                            <p className="text-2xl font-bold text-slate-800">{barangays?.length || 0}</p>
                         </div>
                     </div>
                 </div>
@@ -418,6 +396,7 @@ export default function Establishment() {
                     </div>
                 </div>
             )}
+
         </AdminLayouts>
     );
 }

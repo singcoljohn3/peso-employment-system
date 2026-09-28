@@ -26,7 +26,6 @@ class AdminResumeController extends Controller
 
         $jobSeekersWithoutResume = JobSeeker::with(['user', 'barangay'])
             ->whereDoesntHave('resume')
-            ->where('is_fully_registered', true)
             ->orderBy('last_name')
             ->get();
 
@@ -94,13 +93,11 @@ class AdminResumeController extends Controller
         } catch (ValidationException $e) {
             $missing = $e->validator->errors()->get('fields')[0] ?? [];
             $fieldList = is_array($missing) ? implode(', ', $missing) : $missing;
-            return redirect()->back()->withErrors([
-                'missing_fields' => "Cannot generate resume. Missing required fields: {$fieldList}",
-            ]);
+            return redirect()->route('admin.resumes')
+                ->with('error', "Cannot generate resume. Missing required fields: {$fieldList}");
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors([
-                'error' => 'Failed to generate resume: ' . $e->getMessage(),
-            ]);
+            return redirect()->route('admin.resumes')
+                ->with('error', 'Failed to generate resume: ' . $e->getMessage());
         }
     }
 
@@ -162,19 +159,40 @@ class AdminResumeController extends Controller
 
     public function download(Resume $resume)
     {
+        $jobSeeker = $resume->jobSeeker;
+
+        if (!$jobSeeker) {
+            return redirect()->route('admin.resumes')->with('error', 'Job seeker not found for this resume.');
+        }
+
+        // If file doesn't exist on disk, regenerate it on-the-fly
         if (!$resume->file_path || !\Storage::disk('public')->exists($resume->file_path)) {
-            return redirect()->route('admin.resumes')->with('error', 'Resume file not found.');
+            try {
+                $this->resumeService->regenerateResume(
+                    $resume,
+                    Auth::user(),
+                    $resume->template,
+                );
+                $resume->refresh();
+            } catch (\Exception $e) {
+                return redirect()->route('admin.resumes')->with('error', 'Failed to generate resume: ' . $e->getMessage());
+            }
+        }
+
+        $filePath = \Storage::disk('public')->path($resume->file_path);
+
+        if (!file_exists($filePath)) {
+            return redirect()->route('admin.resumes')->with('error', 'Resume file could not be found on disk.');
         }
 
         $this->resumeService->markAsDownloaded($resume);
 
-        $jobSeeker = $resume->jobSeeker;
-        $downloadName = $resume->resume_id . '_' . str_replace(' ', '_', $jobSeeker?->full_name ?? 'Resume') . '.pdf';
+        $fileName = $resume->resume_id . '_' . str_replace(' ', '_', $jobSeeker->full_name ?? 'Resume') . '.pdf';
 
-        return response()->download(
-            \Storage::disk('public')->path($resume->file_path),
-            $downloadName
-        );
+        return response()->file($filePath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
     }
 
     public function delete(Resume $resume)

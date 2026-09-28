@@ -16,6 +16,7 @@ class JobSeeker extends Model
 
     protected $fillable = [
         'user_id',
+        'agency_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -43,6 +44,11 @@ class JobSeeker extends Model
         'remarks',
         'is_fully_registered',
         'preferred_template',
+        'verification_status',
+        'verified_by',
+        'verified_at',
+        'verification_notes',
+        'photo_url',
     ];
 
     protected $appends = ['full_name'];
@@ -53,6 +59,8 @@ class JobSeeker extends Model
         'willing_outside_municipality' => 'boolean',
         'willing_abroad' => 'boolean',
         'is_fully_registered' => 'boolean',
+        'verification_status' => 'string',
+        'verified_at' => 'datetime',
     ];
 
     public function getFullNameAttribute(): string
@@ -63,6 +71,11 @@ class JobSeeker extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class, 'agency_id');
     }
 
     public function applications(): HasMany
@@ -77,6 +90,11 @@ class JobSeeker extends Model
     public function barangay()
     {
         return $this->belongsTo(Barangay::class, 'barangay_id');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function resume()

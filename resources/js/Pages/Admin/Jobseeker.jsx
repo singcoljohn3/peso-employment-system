@@ -1,7 +1,7 @@
-import { Head, usePage, useForm, Link } from '@inertiajs/react';
+import { Head, usePage, useForm, Link, router } from '@inertiajs/react';
 import AdminLayouts from '@/Layouts/AdminLayouts';
-import { useState } from 'react';
-import { Plus, X, MapPin, Building2, Home, Users, Calendar, Phone, Mail, MapPinned, ChevronLeft, ChevronRight, Eye, User, Briefcase, GraduationCap, Award, FileText, Globe, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, X, MapPin, Building2, Home, Users, Calendar, Phone, Mail, MapPinned, ChevronLeft, ChevronRight, Eye, User, Briefcase, GraduationCap, Award, FileText, Globe, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 // Helper function to format date
 const formatDate = (dateString) => {
@@ -15,9 +15,50 @@ const formatDate = (dateString) => {
 };
 
 export default function Jobseeker() {
-    const { jobSeekers, barangays, region, municipality } = usePage().props;
+    const { jobSeekers, barangays, region, municipality, currentStatus } = usePage().props;
     const [selectedSeeker, setSelectedSeeker] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+    const { post, processing } = useForm();
+
+    useEffect(() => {
+        if (toast.show) {
+            const timer = setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast.show]);
+
+    const statusTabs = [
+        { label: 'All', value: 'all' },
+        { label: 'Pending', value: 'pending' },
+        { label: 'Approved', value: 'approved' },
+        { label: 'Rejected', value: 'rejected' },
+    ];
+
+    const handleStatusFilter = (status) => {
+        router.get(route('admin.jobseekers'), status === 'all' ? {} : { status }, { preserveState: true });
+    };
+
+    const handleApprove = (seeker) => {
+        router.post(route('admin.jobseekers.approve', seeker.id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setToast({ show: true, message: 'Job Seeker approved successfully.', type: 'success' });
+            },
+        });
+    };
+
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'approved':
+                return <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><CheckCircle className="h-3 w-3" /> Approved</span>;
+            case 'rejected':
+                return <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><XCircle className="h-3 w-3" /> Rejected</span>;
+            default:
+                return <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full"><AlertTriangle className="h-3 w-3" /> Pending</span>;
+        }
+    };
 
     // Get pagination data
     const seekers = jobSeekers?.data || [];
@@ -63,6 +104,25 @@ export default function Jobseeker() {
                 </div>
             </div>
 
+            {/* Status Filter Tabs */}
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden mb-6">
+                <div className="px-6 py-3 flex items-center gap-2 flex-wrap">
+                    {statusTabs.map((tab) => (
+                        <button
+                            key={tab.value}
+                            onClick={() => handleStatusFilter(tab.value)}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                currentStatus === tab.value
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Main Content Card */}
             <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                 {/* Header */}
@@ -105,6 +165,7 @@ export default function Jobseeker() {
                                             Email
                                         </div>
                                     </th>
+                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Status</th>
                                     <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
@@ -149,16 +210,32 @@ export default function Jobseeker() {
                                             <span className="text-sm text-slate-600">{seeker.user?.email || 'N/A'}</span>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedSeeker(seeker);
-                                                    setIsDetailModalOpen(true);
-                                                }}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg hover:bg-blue-200 transition-colors"
-                                            >
-                                                <Eye className="h-3.5 w-3.5" />
-                                                View Details
-                                            </button>
+                                            {getStatusBadge(seeker.verification_status)}
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedSeeker(seeker);
+                                                        setIsDetailModalOpen(true);
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg hover:bg-blue-200 transition-colors"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    View
+                                                </button>
+                                                {seeker.verification_status !== 'approved' && (
+                                                    <button
+                                                        onClick={() => handleApprove(seeker)}
+                                                        disabled={processing}
+                                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm shadow-emerald-200/50 hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-300/30 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <CheckCircle className="h-4 w-4" />
+                                                        Approve
+                                                    </button>
+                                                )}
+
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -467,21 +544,60 @@ export default function Jobseeker() {
 
                             {/* Registration Status */}
                             <div className="mb-6">
-                                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                                    <p className="text-xs text-blue-600 uppercase tracking-wider mb-1">Registration Status</p>
-                                    <p className="text-sm font-semibold text-blue-800">
-                                        {selectedSeeker.is_fully_registered ? (
-                                            <span className="inline-flex items-center gap-1">
-                                                <CheckCircle className="h-4 w-4" />
-                                                Fully Registered
-                                            </span>
-                                        ) : (
-                                            <span className="text-orange-600">Partial Registration</span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                        <p className="text-xs text-blue-600 uppercase tracking-wider mb-1">Registration Status</p>
+                                        <p className="text-sm font-semibold text-blue-800">
+                                            {selectedSeeker.is_fully_registered ? (
+                                                <span className="inline-flex items-center gap-1">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Fully Registered
+                                                </span>
+                                            ) : (
+                                                <span className="text-orange-600">Partial Registration</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
+                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Account Verification</p>
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            {getStatusBadge(selectedSeeker.verification_status)}
+                                        </p>
+                                        {selectedSeeker.verified_by && (
+                                            <p className="text-xs text-slate-400 mt-1">
+                                                Verified by: {selectedSeeker.verified_by?.name ?? 'Admin'}
+                                            </p>
                                         )}
-                                    </p>
+                                        {selectedSeeker.verified_at && (
+                                            <p className="text-xs text-slate-400">
+                                                {new Date(selectedSeeker.verified_at).toLocaleDateString()}
+                                            </p>
+                                        )}
+                                        {selectedSeeker.verification_notes && (
+                                            <p className="text-xs text-slate-500 mt-2 italic">
+                                                Note: {selectedSeeker.verification_notes}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className="fixed top-6 right-6 z-[100] animate-in slide-in-from-top-5 fade-in duration-300">
+                    <div className="flex items-center gap-3 px-5 py-3.5 bg-emerald-600 text-white rounded-lg shadow-lg shadow-emerald-200/50 max-w-sm">
+                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                        <p className="text-sm font-medium">{toast.message}</p>
+                        <button
+                            onClick={() => setToast({ show: false, message: '', type: 'success' })}
+                            className="ml-2 text-white/70 hover:text-white transition-colors"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             )}

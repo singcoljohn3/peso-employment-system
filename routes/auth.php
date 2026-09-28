@@ -24,6 +24,7 @@ Route::middleware('guest')->group(function () {
                 'admin' => redirect()->route('admin.dashboard'),
                 'staff' => redirect()->route('staff.dashboard'),
                 'establishment' => redirect()->route('establishment.dashboard'),
+                'agency' => redirect()->route('agency.dashboard'),
                 'job_seeker' => redirect()->route('jobseeker.dashboard'),
                 'baranggay' => redirect()->route('baranggay.dashboard'),
                 default => redirect()->route('jobseeker.dashboard'),

@@ -1,9 +1,11 @@
 <?php
 
 use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,8 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
             'staff' => \App\Http\Middleware\EnsureStaff::class,
             'establishment' => \App\Http\Middleware\EnsureEstablishment::class,
+            'agency' => \App\Http\Middleware\EnsureAgency::class,
             'job_seeker' => \App\Http\Middleware\EnsureJobSeeker::class,
-            'baranggay' => \App\Http\Middleware\EnsureBaranggay::class,
             'sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
 
@@ -31,10 +33,23 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('establishment/*')) {
                 return route('establishment.login');
             }
-            if ($request->is('barangay/*') || $request->is('baranggay/*')) {
-                return route('barangay.login');
+            if ($request->is('agency/*')) {
+                return route('agency.login');
             }
             return route('peso.login');
+        });
+
+        RedirectIfAuthenticated::redirectUsing(function (Request $request) {
+            $role = strtolower((string) ($request->user()?->role ?? ''));
+
+            return match ($role) {
+                'admin' => route('admin.dashboard'),
+                'staff' => route('staff.dashboard'),
+                'establishment' => route('establishment.dashboard'),
+                'agency' => route('agency.dashboard'),
+                'job_seeker' => route('jobseeker.dashboard'),
+                default => route('peso.login'),
+            };
         });
     })
     ->withExceptions(function (Exceptions $exceptions): void {

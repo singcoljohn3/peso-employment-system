@@ -22,5 +22,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed barangays for Opol, Misamis Oriental
         $this->call(BarangaySeeder::class);
+
+        // Seed default job vacancies for agencies
+        $this->call(AgencyJobSeeder::class);
     }
 }

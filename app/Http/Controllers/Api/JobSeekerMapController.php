@@ -167,13 +167,7 @@ class JobSeekerMapController extends Controller
                     }
 
                     // Education match (20%)
-                    $reqEdu = strtolower($job->description ?? '');
-                    $reqEduLevel = 0;
-                    foreach ($educationLevels as $key => $level) {
-                        if (str_contains($reqEdu, $key)) {
-                            $reqEduLevel = max($reqEduLevel, $level);
-                        }
-                    }
+                    $reqEduLevel = $this->getEducationalBackgroundLevel($job->educational_background);
                     if ($seekerEduLevel >= $reqEduLevel) {
                         $details['education'] = 20;
                     } elseif ($seekerEduLevel > 0 && $reqEduLevel > 0) {
@@ -292,11 +286,12 @@ class JobSeekerMapController extends Controller
                 'distance_km' => $distance !== null ? round($distance, 2) : null,
                 'travel_time' => $travelTime,
                 'applications_count' => $est->applications_count ?? 0,
-                'jobs' => $est->jobs->map(function ($j) {
+                    'jobs' => $est->jobs->map(function ($j) {
                     return [
                         'id' => $j->id,
                         'job_title' => $j->job_title,
                         'description' => $j->description,
+                        'educational_background' => $j->educational_background,
                         'salary_range' => $j->salary_range,
                         'employment_type' => $j->employment_type,
                         'hiring_status' => $j->hiring_status,
@@ -406,6 +401,7 @@ class JobSeekerMapController extends Controller
                         'id' => $j->id,
                         'job_title' => $j->job_title,
                         'description' => $j->description,
+                        'educational_background' => $j->educational_background,
                         'salary_range' => $j->salary_range,
                         'employment_type' => $j->employment_type,
                         'hiring_status' => $j->hiring_status,
@@ -551,11 +547,7 @@ class JobSeekerMapController extends Controller
                         $matchingSkills = array_merge($matchingSkills, $matched);
                     }
 
-                    $reqEdu = strtolower($job->description ?? '');
-                    $reqEduLevel = 0;
-                    foreach ($educationLevels as $key => $level) {
-                        if (str_contains($reqEdu, $key)) $reqEduLevel = max($reqEduLevel, $level);
-                    }
+                    $reqEduLevel = $this->getEducationalBackgroundLevel($job->educational_background);
                     if ($seekerEduLevel >= $reqEduLevel) $score += 20;
                     elseif ($seekerEduLevel > 0 && $reqEduLevel > 0) {
                         $score += round(($seekerEduLevel / max($reqEduLevel, 1)) * 20);
@@ -638,6 +630,31 @@ class JobSeekerMapController extends Controller
             ->values();
 
         return response()->json(['success' => true, 'data' => $stats]);
+    }
+
+    private function getEducationalBackgroundLevel(?string $educationalBackground): int
+    {
+        if (!$educationalBackground || $educationalBackground === 'Any Educational Background' || $educationalBackground === 'Other') {
+            return 0;
+        }
+
+        $map = [
+            'High School Graduate' => 2,
+            'Senior High School Graduate' => 2,
+            'Vocational Graduate' => 3,
+            'TESDA NC Holder' => 3,
+            'College Level' => 3,
+        ];
+
+        if (isset($map[$educationalBackground])) {
+            return $map[$educationalBackground];
+        }
+
+        if (str_starts_with($educationalBackground, "Bachelor's Degree")) {
+            return 4;
+        }
+
+        return 0;
     }
 
     private function getEducationLevels(): array

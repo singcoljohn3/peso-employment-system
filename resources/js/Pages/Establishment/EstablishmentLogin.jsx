@@ -66,7 +66,7 @@ export default function EstablishmentLogin({ status }) {
                                 </h1>
 
                                 <p className="mt-6 max-w-sm text-base leading-relaxed text-blue-100/90">
-                                    Manage job vacancies, applicants, and hiring processes efficiently through the PESO Employment System.
+                                    Manage job vacancies, applicants, and hiring processes efficiently through the ESTABLISHMENT.
                                 </p>
 
                                 {/* Feature icons */}
@@ -205,7 +205,7 @@ export default function EstablishmentLogin({ status }) {
 
                                 <div className="mt-8 text-center">
                                     <p className="text-xs text-slate-500">
-                                        © {new Date().getFullYear()} PESO Employment System. All rights reserved.
+                                        © {new Date().getFullYear()} ESTABLISHMENT. All rights reserved.
                                     </p>
                                 </div>
                             </div>

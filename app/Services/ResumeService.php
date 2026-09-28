@@ -18,6 +18,11 @@ class ResumeService
         'ats-friendly' => 'ATS-Friendly',
         'creative' => 'Creative',
         'minimalist' => 'Minimalist',
+        'formal-corporate' => 'Formal Corporate',
+        'formal-elegant' => 'Formal Elegant',
+        'formal-executive' => 'Formal Executive',
+        'formal-professional' => 'Formal Professional',
+        'formal-traditional' => 'Formal Traditional',
     ];
 
     public const REQUIRED_FIELDS = [
@@ -26,7 +31,6 @@ class ResumeService
         'address' => 'Address',
         'contact_number' => 'Contact Number',
         'email' => 'Email',
-        'educational_attainment' => 'Educational Attainment',
     ];
 
     public function validateRequiredFields(JobSeeker $jobSeeker): array
@@ -50,19 +54,25 @@ class ResumeService
                 'fields' => $missing,
             ]);
         }
-
-        if (!$jobSeeker->is_fully_registered) {
-            throw ValidationException::withMessages([
-                'registration' => 'Job seeker must be fully registered before generating a resume.',
-            ]);
-        }
     }
 
     private function generateResumeId(): string
     {
         $year = date('Y');
-        $count = Resume::whereYear('created_at', $year)->count();
-        return 'RSM-' . $year . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        do {
+            $maxSequence = Resume::where('resume_id', 'like', "RSM-{$year}-%")
+                ->orderByDesc('resume_id')
+                ->value('resume_id');
+            if ($maxSequence) {
+                $lastNumber = (int) substr($maxSequence, -4);
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+            $resumeId = 'RSM-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        } while (Resume::where('resume_id', $resumeId)->exists());
+
+        return $resumeId;
     }
 
     public function buildResumeData(JobSeeker $jobSeeker): array
@@ -73,16 +83,16 @@ class ResumeService
         if ($jobSeeker->educational_attainment) {
             $educationalBackground[] = [
                 'level' => $jobSeeker->educational_attainment,
-                'school' => $jobSeeker->address ?? 'N/A',
-                'year' => '',
+                'school' => $jobSeeker->school_name ?? $jobSeeker->address ?? '',
+                'year' => $jobSeeker->year_graduated ?? '',
             ];
         }
 
         $workExperience = [];
         if ($jobSeeker->occupation || $jobSeeker->employer_company) {
             $workExperience[] = [
-                'position' => $jobSeeker->occupation ?? 'N/A',
-                'company' => $jobSeeker->employer_company ?? 'N/A',
+                'position' => $jobSeeker->occupation ?? '',
+                'company' => $jobSeeker->employer_company ?? '',
                 'years' => $jobSeeker->work_experience_years ? $jobSeeker->work_experience_years . ' year(s)' : '',
             ];
         }
@@ -90,7 +100,7 @@ class ResumeService
         $skills = [];
         if ($jobSeeker->skills) {
             $skills = is_array($jobSeeker->skills) ? $jobSeeker->skills : explode(',', $jobSeeker->skills);
-            $skills = array_map('trim', $skills);
+            $skills = array_map('trim', array_filter($skills));
         }
 
         $certifications = [];
@@ -111,11 +121,26 @@ class ResumeService
             $licenses = array_map('trim', array_filter($licenses));
         }
 
+        // Only include profile photo if the file actually exists on disk
+        $profilePhoto = null;
+        if ($jobSeeker->photo_url) {
+            $photoPath = storage_path('app/public/' . $jobSeeker->photo_url);
+            if (file_exists($photoPath)) {
+                $profilePhoto = $jobSeeker->photo_url;
+            }
+        }
+
+        $fullName = trim(
+            ($jobSeeker->first_name ?? '') . ' '
+            . ($jobSeeker->middle_name ? $jobSeeker->middle_name . ' ' : '')
+            . ($jobSeeker->last_name ?? '')
+        );
+
         return [
             'first_name' => $jobSeeker->first_name ?? '',
             'middle_name' => $jobSeeker->middle_name ?? '',
             'last_name' => $jobSeeker->last_name ?? '',
-            'full_name' => trim(($jobSeeker->first_name ?? '') . ' ' . ($jobSeeker->middle_name ? $jobSeeker->middle_name . ' ' : '') . ($jobSeeker->last_name ?? '')),
+            'full_name' => $fullName,
             'address' => $jobSeeker->address ?? '',
             'contact_number' => $jobSeeker->contact_number ?? '',
             'email' => $jobSeeker->email ?? ($user?->email ?? ''),
@@ -123,7 +148,7 @@ class ResumeService
             'age' => $jobSeeker->age ?? '',
             'civil_status' => $jobSeeker->civil_status ?? '',
             'sex' => $jobSeeker->sex ?? '',
-            'profile_photo' => $user?->profile_photo_path ?? null,
+            'profile_photo' => $profilePhoto,
             'career_objective' => $jobSeeker->preferred_job
                 ? 'Seeking a position as ' . $jobSeeker->preferred_job . ' where I can utilize my skills and experience to contribute to organizational growth.'
                 : '',
@@ -133,6 +158,7 @@ class ResumeService
             'certifications' => $certifications,
             'trainings' => $trainings,
             'licenses' => $licenses,
+            'references' => [],
             'barangay' => $jobSeeker->barangay?->barangay_name ?? '',
             'municipality' => 'Opol, Misamis Oriental',
             'generated_at' => now()->format('F d, Y'),

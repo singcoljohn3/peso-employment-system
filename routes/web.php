@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminResumeController;
+use App\Http\Controllers\AgencyAccountController;
 use App\Http\Controllers\ApplicationsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportsController;
@@ -17,8 +18,8 @@ Route::get('/', function () {
             'admin' => redirect()->route('admin.dashboard'),
             'staff' => redirect()->route('staff.dashboard'),
             'establishment' => redirect()->route('establishment.dashboard'),
+            'agency' => redirect()->route('agency.dashboard'),
             'job_seeker' => redirect()->route('jobseeker.dashboard'),
-            'baranggay' => redirect()->route('baranggay.dashboard'),
             default => redirect()->route('jobseeker.dashboard'),
         };
     }
@@ -63,8 +64,8 @@ Route::get('/dashboard', function () {
         'admin' => redirect()->route('admin.dashboard'),
         'staff' => redirect()->route('staff.dashboard'),
         'establishment' => redirect()->route('establishment.dashboard'),
+        'agency' => redirect()->route('agency.dashboard'),
         'job_seeker' => redirect()->route('jobseeker.dashboard'),
-        'baranggay' => redirect()->route('baranggay.dashboard'),
         default => redirect()->route('jobseeker.dashboard'),
     };
 })->middleware(['auth'])->name('dashboard');
@@ -77,8 +78,8 @@ Route::get('peso-login', function () {
             'admin' => redirect()->route('admin.dashboard'),
             'staff' => redirect()->route('staff.dashboard'),
             'establishment' => redirect()->route('establishment.dashboard'),
+            'agency' => redirect()->route('agency.dashboard'),
             'job_seeker' => redirect()->route('jobseeker.dashboard'),
-            'baranggay' => redirect()->route('baranggay.dashboard'),
             default => redirect()->route('jobseeker.dashboard'),
         };
     }
@@ -113,6 +114,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
         ->name('admin.jobvacancies');
     Route::post('/admin/job-vacancies', [AdminController::class, 'storeJobVacancy'])
         ->name('admin.jobvacancies.store');
+    Route::delete('/admin/job-vacancies/{job}', [AdminController::class, 'destroyJobVacancy'])
+        ->name('admin.jobvacancies.destroy');
+    Route::delete('/admin/establishments/{establishment}', [AdminController::class, 'destroyEstablishment'])
+        ->name('admin.establishments.destroy');
     Route::get('/admin/applications', [AdminController::class, 'applications'])
         ->name('admin.applications');
     Route::post('/admin/applications', [AdminController::class, 'storeApplication'])
@@ -132,10 +137,38 @@ Route::middleware(['auth', 'admin'])->group(function () {
         ->name('admin.user-management');
     Route::post('/admin/user-management', [AdminController::class, 'storeUserAccount'])
         ->name('admin.user-management.store');
+    Route::put('/admin/user-management/{user}/deactivate', [AdminController::class, 'deactivateUser'])
+        ->name('admin.user-management.deactivate');
+
+    Route::get('/admin/hiring-establishments', [AdminController::class, 'hiringEstablishments'])
+        ->name('admin.hiring-establishments');
+
+    // Agency Accounts (registration approval workflow)
+    Route::get('/admin/agencies', [AgencyAccountController::class, 'index'])
+        ->name('admin.agencies');
+    Route::get('/admin/agencies/{agency}', [AgencyAccountController::class, 'show'])
+        ->name('admin.agencies.show');
+    Route::post('/admin/agencies/{agency}/approve', [AgencyAccountController::class, 'approve'])
+        ->name('admin.agencies.approve');
+    Route::post('/admin/agencies/{agency}/reject', [AgencyAccountController::class, 'reject'])
+        ->name('admin.agencies.reject');
+
+    // Approve/Reject routes
+    Route::post('/admin/jobseekers/{jobSeeker}/approve', [AdminController::class, 'approveJobSeeker'])
+        ->name('admin.jobseekers.approve');
+    Route::post('/admin/jobseekers/{jobSeeker}/reject', [AdminController::class, 'rejectJobSeeker'])
+        ->name('admin.jobseekers.reject');
+
+    // Suspend routes
+    Route::post('/admin/jobseekers/{jobSeeker}/suspend', [AdminController::class, 'suspendJobSeeker'])
+        ->name('admin.jobseekers.suspend');
+    Route::post('/admin/establishments/{establishment}/suspend', [AdminController::class, 'suspendEstablishment'])
+        ->name('admin.establishments.suspend');
 
     // Reports Routes
     Route::get('/admin/reports', [ReportsController::class, 'index'])
         ->name('admin.reports');
+    Route::get('/api/reports/data', [ReportsController::class, 'getReportsData']);
     Route::get('/api/reports/statistics', [ReportsController::class, 'getStatistics']);
     Route::get('/api/reports/monthly-applications', [ReportsController::class, 'getMonthlyApplications']);
     Route::get('/api/reports/hiring-distribution', [ReportsController::class, 'getHiringStatusDistribution']);
@@ -145,26 +178,49 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/reports/export/excel', [ReportsController::class, 'exportExcel']);
     Route::get('/api/reports/export/csv', [ReportsController::class, 'exportCsv']);
     Route::post('/api/reports/generate', [ReportsController::class, 'generateReport']);
-    
+
+    // New Analytics Routes
+    Route::get('/api/reports/monthly-job-seekers', [ReportsController::class, 'getMonthlyJobSeekers']);
+    Route::get('/api/reports/monthly-establishments', [ReportsController::class, 'getMonthlyEstablishments']);
+    Route::get('/api/reports/top-establishments', [ReportsController::class, 'getTopHiringEstablishments']);
+    Route::get('/api/reports/top-jobs', [ReportsController::class, 'getTopAppliedJobs']);
+    Route::get('/api/reports/barangay-distribution', [ReportsController::class, 'getBarangayEmploymentDistribution']);
+    Route::get('/api/reports/top-skills', [ReportsController::class, 'getMostRequestedSkills']);
+    Route::get('/api/reports/top-categories', [ReportsController::class, 'getMostInDemandCategories']);
+    Route::get('/api/reports/average-hiring-time', [ReportsController::class, 'getAverageHiringTime']);
+    Route::get('/api/reports/recent-activities', [ReportsController::class, 'getRecentActivities']);
+    Route::get('/api/reports/system-monitoring', [ReportsController::class, 'getSystemMonitoring']);
+    Route::get('/api/reports/application-trend', [ReportsController::class, 'getApplicationTrend']);
+    Route::get('/api/reports/employment-success-rate', [ReportsController::class, 'getEmploymentSuccessRate']);
+
+    // Report Table Routes
+    Route::get('/api/reports/table/job-seekers', [ReportsController::class, 'getJobSeekersReport']);
+    Route::get('/api/reports/table/establishments', [ReportsController::class, 'getEstablishmentsReport']);
+    Route::get('/api/reports/table/job-vacancies', [ReportsController::class, 'getJobVacanciesReport']);
+    Route::get('/api/reports/table/applications', [ReportsController::class, 'getApplicationsReport']);
+    Route::get('/api/reports/table/hiring-status', [ReportsController::class, 'getHiringStatusReport']);
+    Route::get('/api/reports/table/employment-statistics', [ReportsController::class, 'getEmploymentStatisticsReport']);
+    Route::get('/api/reports/table/barangay-employment', [ReportsController::class, 'getBarangayEmploymentReport']);
+    Route::get('/api/reports/table/resume-generation', [ReportsController::class, 'getResumeGenerationReport']);
+
     // Additional API routes for filters
     Route::get('/api/barangays', function () {
-        return response()->json(\App\Models\Barangay::orderBy('name')->get());
+        return response()->json(\App\Models\Barangay::orderBy('barangay_name')->get());
     });
     Route::get('/api/establishments', function () {
         return response()->json(\App\Models\Establishment::orderBy('company_name')->get());
     });
 
+
+
     // Establishment Locations API (session-based auth for admin dashboard)
-    Route::get('/api/establishments/locations', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'index']);
-    Route::post('/api/establishments/locations', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'store']);
-    Route::put('/api/establishments/locations/{id}', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'update']);
-    Route::delete('/api/establishments/locations/{id}', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'destroy']);
-    Route::get('/api/establishments/locations/categories', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'categories']);
-    Route::post('/api/establishments/locations/nearby', [\App\Http\Controllers\Api\EstablishmentLocationController::class, 'nearby']);
+    // Note: api.php already registers these under auth:sanctum for mobile
 
     // GIS Module API
     Route::get('/api/gis/data', [\App\Http\Controllers\Api\GisDataController::class, 'index']);
     Route::get('/api/gis/barangay-stats', [\App\Http\Controllers\Api\GisDataController::class, 'barangayStats']);
+    Route::get('/api/gis/establishments/{id}', [\App\Http\Controllers\Api\GisDataController::class, 'establishmentDetail']);
+    Route::get('/api/gis/heatmap', [\App\Http\Controllers\Api\GisDataController::class, 'heatmapData']);
 
     // Resume Management
     Route::get('/admin/resumes', [AdminResumeController::class, 'index'])
@@ -197,6 +253,58 @@ Route::middleware(['auth', 'admin'])->group(function () {
         ->name('admin.applications.download-resume');
     Route::delete('/admin/applications/{id}', [ApplicationsController::class, 'destroy'])
         ->name('admin.applications.destroy');
+});
+
+// Notification API (session-based auth for all authenticated web users)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/notifications', function () {
+        $user = Auth::user();
+        $rows = \Illuminate\Support\Facades\DB::table('notifications')
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('notifiable_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($n) {
+                $data = $n->data ? json_decode($n->data, true) : [];
+                return [
+                    'id' => $n->id,
+                    'type' => $n->type,
+                    'title' => $data['title'] ?? $n->type,
+                    'message' => $data['message'] ?? '',
+                    'data' => $data,
+                    'read_at' => $n->read_at,
+                    'created_at' => $n->created_at,
+                ];
+            });
+        $unreadCount = \Illuminate\Support\Facades\DB::table('notifications')
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('notifiable_id', $user->id)
+            ->whereNull('read_at')
+            ->count();
+        return response()->json([
+            'notifications' => $rows,
+            'unread_count' => $unreadCount,
+        ]);
+    });
+    Route::post('/api/notifications/{id}/read', function ($id) {
+        $user = Auth::user();
+        \Illuminate\Support\Facades\DB::table('notifications')
+            ->where('id', $id)
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('notifiable_id', $user->id)
+            ->update(['read_at' => now()]);
+        return response()->json(['message' => 'Notification marked as read.']);
+    });
+    Route::post('/api/notifications/read-all', function () {
+        $user = Auth::user();
+        \Illuminate\Support\Facades\DB::table('notifications')
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('notifiable_id', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+        return response()->json(['message' => 'All notifications marked as read.']);
+    });
 });
 
 Route::middleware(['auth', 'staff'])->group(function () {
@@ -241,6 +349,10 @@ Route::middleware(['auth', 'establishment'])->group(function () {
         ->name('establishment.applicants');
     Route::put('/establishment/applicants/{application}', [App\Http\Controllers\EstablishmentController::class, 'updateApplication'])
         ->name('establishment.applicants.update');
+    Route::post('/establishment/applicants/{application}/schedule-interview', [App\Http\Controllers\EstablishmentController::class, 'scheduleInterview'])
+        ->name('establishment.applicants.schedule-interview');
+    Route::get('/establishment/applicants/{application}/resume-preview', [App\Http\Controllers\EstablishmentController::class, 'resumePreview'])
+        ->name('establishment.applicants.resume-preview');
     Route::get('/establishment/hiring-status', [App\Http\Controllers\EstablishmentController::class, 'hiringStatus'])
         ->name('establishment.hiring-status');
     Route::get('/establishment/reports', [App\Http\Controllers\EstablishmentController::class, 'reports'])
@@ -253,12 +365,99 @@ Route::middleware(['auth', 'establishment'])->group(function () {
         ->name('establishment.notifications');
     Route::get('/establishment/settings', [App\Http\Controllers\EstablishmentController::class, 'settings'])
         ->name('establishment.settings');
+    Route::put('/establishment/settings/password', [App\Http\Controllers\EstablishmentController::class, 'updatePassword'])
+        ->name('establishment.settings.password');
     Route::get('/establishment/profile', [App\Http\Controllers\EstablishmentController::class, 'profile'])
         ->name('establishment.profile');
     Route::put('/establishment/profile', [App\Http\Controllers\EstablishmentController::class, 'updateProfile'])
         ->name('establishment.profile.update');
+    Route::post('/establishment/profile/logo', [App\Http\Controllers\EstablishmentController::class, 'uploadLogo'])
+        ->name('establishment.profile.logo');
+    Route::delete('/establishment/profile/logo', [App\Http\Controllers\EstablishmentController::class, 'removeLogo'])
+        ->name('establishment.profile.logo.remove');
     Route::post('/establishment/logout', [App\Http\Controllers\EstablishmentController::class, 'logout'])
         ->name('establishment.logout');
+});
+
+// ═══════════════════════════════════════════════════════════════
+// AGENCY PORTAL
+// ═══════════════════════════════════════════════════════════════
+Route::middleware('guest')->group(function () {
+    Route::get('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerCreate'])
+        ->name('agency.register');
+    Route::post('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerStore'])
+        ->middleware('throttle:10,1')
+        ->name('agency.register.store');
+    Route::get('/agency/login', [App\Http\Controllers\AgencyController::class, 'loginCreate'])
+        ->name('agency.login');
+    Route::post('/agency/login', [App\Http\Controllers\AgencyController::class, 'loginStore'])
+        ->middleware('throttle:5,1')
+        ->name('agency.login.store');
+});
+
+Route::middleware(['auth', 'agency'])->prefix('agency')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\AgencyController::class, 'dashboard'])
+        ->name('agency.dashboard');
+    Route::get('/profile', [App\Http\Controllers\AgencyController::class, 'profile'])
+        ->name('agency.profile');
+    Route::put('/profile', [App\Http\Controllers\AgencyController::class, 'updateProfile'])
+        ->name('agency.profile.update');
+    Route::post('/profile/logo', [App\Http\Controllers\AgencyController::class, 'uploadLogo'])
+        ->name('agency.profile.logo');
+    Route::delete('/profile/logo', [App\Http\Controllers\AgencyController::class, 'removeLogo'])
+        ->name('agency.profile.logo.remove');
+    Route::get('/jobs', [App\Http\Controllers\AgencyController::class, 'jobs'])
+        ->name('agency.jobs');
+    Route::post('/jobs', [App\Http\Controllers\AgencyController::class, 'storeJob'])
+        ->name('agency.jobs.store');
+    Route::put('/jobs/{job}', [App\Http\Controllers\AgencyController::class, 'updateJob'])
+        ->name('agency.jobs.update');
+    Route::delete('/jobs/{job}', [App\Http\Controllers\AgencyController::class, 'deleteJob'])
+        ->name('agency.jobs.delete');
+    Route::post('/jobs/{job}/apply', [App\Http\Controllers\AgencyController::class, 'applyJob'])
+        ->name('agency.jobs.apply');
+    Route::patch('/jobs/{job}/status', [App\Http\Controllers\AgencyController::class, 'updateJobStatus'])
+        ->name('agency.jobs.status');
+    Route::get('/applicants', [App\Http\Controllers\AgencyController::class, 'applicants'])
+        ->name('agency.applicants');
+    Route::patch('/applicants/{application}', [App\Http\Controllers\AgencyController::class, 'updateApplication'])
+        ->name('agency.applicants.update');
+    Route::post('/applicants/{application}/schedule-interview', [App\Http\Controllers\AgencyController::class, 'scheduleInterview'])
+        ->name('agency.applicants.schedule-interview');
+    Route::get('/applicants/{application}/resume-preview', [App\Http\Controllers\AgencyController::class, 'resumePreview'])
+        ->name('agency.applicants.resume-preview');
+    Route::get('/members', [App\Http\Controllers\AgencyController::class, 'members'])
+        ->name('agency.members');
+    Route::post('/members', [App\Http\Controllers\AgencyController::class, 'storeMember'])
+        ->name('agency.members.store');
+    Route::patch('/members/{jobSeeker}', [App\Http\Controllers\AgencyController::class, 'updateMember'])
+        ->name('agency.members.update');
+    Route::patch('/members/{jobSeeker}/status', [App\Http\Controllers\AgencyController::class, 'updateMemberStatus'])
+        ->name('agency.members.status');
+    Route::get('/members/{jobSeeker}/resume', [App\Http\Controllers\AgencyController::class, 'memberResumeDownload'])
+        ->name('agency.members.resume');
+    Route::get('/members/{jobSeeker}/resume-builder', [App\Http\Controllers\AgencyController::class, 'memberResumeBuilder'])
+        ->name('agency.members.resume-builder');
+    Route::put('/members/{jobSeeker}/resume-builder', [App\Http\Controllers\AgencyController::class, 'saveMemberResume'])
+        ->name('agency.members.resume-builder.save');
+    Route::post('/members/{jobSeeker}/resume-preview', [App\Http\Controllers\AgencyController::class, 'memberResumeLivePreview'])
+        ->name('agency.members.resume-preview');
+    Route::post('/members/{jobSeeker}/resume/photo', [App\Http\Controllers\AgencyController::class, 'updateMemberResumePhoto'])
+        ->name('agency.members.resume-photo');
+    Route::get('/hiring-status', [App\Http\Controllers\AgencyController::class, 'hiringStatus'])
+        ->name('agency.hiring-status');
+    Route::get('/reports', [App\Http\Controllers\AgencyController::class, 'reports'])
+        ->name('agency.reports');
+    Route::get('/reports/pdf', [App\Http\Controllers\AgencyController::class, 'exportReport'])
+        ->name('agency.reports.pdf');
+    Route::get('/notifications', [App\Http\Controllers\AgencyController::class, 'notifications'])
+        ->name('agency.notifications');
+    Route::get('/settings', [App\Http\Controllers\AgencyController::class, 'settings'])
+        ->name('agency.settings');
+    Route::put('/settings/password', [App\Http\Controllers\AgencyController::class, 'updatePassword'])
+        ->name('agency.settings.password');
+    Route::post('/logout', [App\Http\Controllers\AgencyController::class, 'logout'])
+        ->name('agency.logout');
 });
 
 Route::middleware(['auth', 'job_seeker'])->group(function () {
@@ -310,52 +509,6 @@ Route::middleware(['auth', 'job_seeker'])->group(function () {
     Route::get('/api/job-seeker/recently-viewed', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'recentlyViewed']);
     Route::get('/api/job-seeker/recommendations', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'recommendations']);
     Route::get('/api/job-seeker/barangay-stats', [\App\Http\Controllers\Api\JobSeekerMapController::class, 'barangayStats']);
-});
-
-// Barangay Authentication Routes
-Route::get('barangay/login', function () {
-    if (Auth::check()) {
-        $role = strtolower((string) Auth::user()->role);
-        if ($role === 'baranggay') {
-            return redirect()->route('baranggay.dashboard');
-        }
-        Auth::logout();
-        session()->invalidate();
-        session()->regenerateToken();
-    }
-
-    return app(App\Http\Controllers\BarangayController::class)->loginCreate();
-})->name('barangay.login');
-
-Route::middleware('guest')->group(function () {
-    Route::post('barangay/login', [App\Http\Controllers\BarangayController::class, 'loginStore']);
-});
-
-Route::middleware(['auth', 'baranggay'])->group(function () {
-    Route::get('/barangay/dashboard', [App\Http\Controllers\BarangayController::class, 'dashboard'])
-        ->name('barangay.dashboard');
-    Route::get('/barangay/job-seekers', [App\Http\Controllers\BarangayController::class, 'jobSeekers'])
-        ->name('barangay.job-seekers');
-    Route::get('/barangay/residents', [App\Http\Controllers\BarangayController::class, 'residents'])
-        ->name('barangay.residents');
-    Route::get('/barangay/job-referrals', [App\Http\Controllers\BarangayController::class, 'jobReferrals'])
-        ->name('barangay.job-referrals');
-    Route::get('/barangay/local-jobs', [App\Http\Controllers\BarangayController::class, 'localJobs'])
-        ->name('barangay.local-jobs');
-    Route::get('/barangay/reports', [App\Http\Controllers\BarangayController::class, 'reports'])
-        ->name('barangay.reports');
-    Route::get('/barangay/notifications', [App\Http\Controllers\BarangayController::class, 'notifications'])
-        ->name('barangay.notifications');
-    Route::get('/barangay/announcements', [App\Http\Controllers\BarangayController::class, 'announcements'])
-        ->name('barangay.announcements');
-    Route::get('/barangay/profile', [App\Http\Controllers\BarangayController::class, 'profile'])
-        ->name('barangay.profile');
-    Route::put('/barangay/profile', [App\Http\Controllers\BarangayController::class, 'updateProfile'])
-        ->name('barangay.profile.update');
-    Route::get('/barangay/settings', [App\Http\Controllers\BarangayController::class, 'settings'])
-        ->name('barangay.settings');
-    Route::post('/barangay/logout', [App\Http\Controllers\BarangayController::class, 'logout'])
-        ->name('barangay.logout');
 });
 
 Route::middleware('auth')->group(function () {

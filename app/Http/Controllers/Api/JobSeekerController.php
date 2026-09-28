@@ -7,6 +7,7 @@ use App\Models\Barangay;
 use App\Models\JobSeeker;
 use App\Services\ResumeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class JobSeekerController extends Controller
@@ -64,7 +65,11 @@ class JobSeekerController extends Controller
             ])
         );
 
-        $this->resumeService->autoGenerateResume($jobSeeker);
+        try {
+            $this->resumeService->autoGenerateResume($jobSeeker);
+        } catch (\Exception $e) {
+            \Log::warning('Resume generation failed for job_seeker ' . $jobSeeker->id . ': ' . $e->getMessage());
+        }
 
         $jobSeeker->load(['barangay']);
 
@@ -96,6 +101,32 @@ class JobSeekerController extends Controller
         $barangays = Barangay::all();
         return response()->json([
             'barangays' => $barangays,
+        ]);
+    }
+
+    public function uploadPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+        $jobSeeker = JobSeeker::where('user_id', $user->id)->first();
+
+        if (!$jobSeeker) {
+            return response()->json(['message' => 'Profile not found.'], 404);
+        }
+
+        if ($jobSeeker->photo_url) {
+            Storage::disk('public')->delete($jobSeeker->photo_url);
+        }
+
+        $path = $request->file('photo')->store('photos', 'public');
+        $jobSeeker->update(['photo_url' => $path]);
+
+        return response()->json([
+            'message' => 'Profile photo uploaded successfully.',
+            'photo_url' => $path,
         ]);
     }
 

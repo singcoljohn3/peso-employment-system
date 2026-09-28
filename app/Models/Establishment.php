@@ -25,6 +25,7 @@ class Establishment extends Model
         'latitude',
         'longitude',
         'industry_category',
+        'description',
     ];
 
     protected $casts = [

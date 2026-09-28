@@ -1,13 +1,11 @@
 import AdminLayouts from '@/Layouts/AdminLayouts';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import {
-    FileText, Download, RefreshCw, Trash2, Plus,
+    FileText, Download,
     Search, CheckCircle, XCircle, AlertCircle,
-    Eye, Clock, User, ChevronRight, Filter,
-    Loader2, Palette, FileDown, History,
-    DollarSign, ShieldCheck, Layers, Users,
-    ExternalLink
+    Eye, Clock,
+    Loader2, Palette, FileDown, History, Printer
 } from 'lucide-react';
 
 const statusBadge = (status, statusLabels, statusColors) => {
@@ -34,22 +32,16 @@ const statusBadge = (status, statusLabels, statusColors) => {
 };
 
 export default function AdminResumes({
-    resumes, jobSeekersWithoutResume, templates, logs, stats,
+    resumes, templates, logs, stats,
     statusLabels, statusColors, allStatuses
 }) {
     const { flash } = usePage().props;
     const [searchTerm, setSearchTerm] = useState('');
-    const [showGenerateModal, setShowGenerateModal] = useState(false);
-    const [showBulkModal, setShowBulkModal] = useState(false);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
-    const [selectedSeekerId, setSelectedSeekerId] = useState('');
-    const [selectedTemplate, setSelectedTemplate] = useState('modern-professional');
     const [previewData, setPreviewData] = useState(null);
     const [previewLoading, setPreviewLoading] = useState(false);
-    const [generating, setGenerating] = useState(false);
+    const [selectedResume, setSelectedResume] = useState(null);
     const [statusFilter, setStatusFilter] = useState('');
-    const [selectedSeekers, setSelectedSeekers] = useState([]);
-    const [generateError, setGenerateError] = useState('');
 
     const filteredResumes = resumes?.data?.filter(r => {
         const matchesSearch = !searchTerm ||
@@ -60,48 +52,9 @@ export default function AdminResumes({
         return matchesSearch && matchesStatus;
     }) ?? [];
 
-    const handleGenerate = async (e) => {
-        e.preventDefault();
-        if (!selectedSeekerId) return;
-        setGenerateError('');
-        setGenerating(true);
-        router.post(route('admin.resumes.generate'), {
-            job_seeker_id: selectedSeekerId,
-            template: selectedTemplate,
-        }, {
-            onSuccess: () => {
-                setGenerating(false);
-                setShowGenerateModal(false);
-                setSelectedSeekerId('');
-                setGenerateError('');
-            },
-            onError: (errors) => {
-                setGenerating(false);
-                const errMsg = Object.values(errors).flat().filter(Boolean).join('. ');
-                setGenerateError(errMsg || 'Failed to generate resume. Check the job seeker profile for missing required fields.');
-            },
-            onFinish: () => { setGenerating(false); },
-        });
-    };
-
-    const handleBulkGenerate = async () => {
-        if (selectedSeekers.length === 0) return;
-        setGenerating(true);
-        router.post(route('admin.resumes.bulk-generate'), {
-            job_seeker_ids: selectedSeekers,
-            template: selectedTemplate,
-        }, {
-            onSuccess: () => {
-                setGenerating(false);
-                setShowBulkModal(false);
-                setSelectedSeekers([]);
-            },
-            onError: () => { setGenerating(false); },
-        });
-    };
-
-    const openPreview = async (seekerId, template) => {
+    const openPreview = async (seekerId, template, resume) => {
         setShowPreviewModal(true);
+        setSelectedResume(resume);
         setPreviewLoading(true);
         setPreviewData(null);
         try {
@@ -119,10 +72,13 @@ export default function AdminResumes({
         }
     };
 
-    const toggleSeeker = (id) => {
-        setSelectedSeekers(prev =>
-            prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-        );
+    const handlePrintResume = () => {
+        const iframe = document.querySelector('iframe[title="Resume Preview"]');
+        if (!iframe) return;
+        const printWindow = iframe.contentWindow;
+        if (!printWindow) return;
+        printWindow.focus();
+        printWindow.print();
     };
 
     return (
@@ -162,10 +118,6 @@ export default function AdminResumes({
                             <p className="text-2xl font-bold text-amber-600">{stats?.draft ?? 0}</p>
                         </div>
                         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs text-slate-500 flex items-center gap-1"><Users className="h-3 w-3 text-red-500" /> Without</p>
-                            <p className="text-2xl font-bold text-red-600">{stats?.seekers_without ?? 0}</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                             <p className="text-xs text-slate-500 flex items-center gap-1"><Palette className="h-3 w-3 text-blue-500" /> Templates</p>
                             <p className="text-2xl font-bold text-blue-600">{Object.keys(templates ?? {}).length}</p>
                         </div>
@@ -194,22 +146,6 @@ export default function AdminResumes({
                                     <option key={s} value={s}>{statusLabels?.[s] ?? s}</option>
                                 ))}
                             </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {jobSeekersWithoutResume?.length > 0 && (
-                                <button
-                                    onClick={() => setShowBulkModal(true)}
-                                    className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                                >
-                                    <Users className="h-4 w-4" /> Bulk Generate
-                                </button>
-                            )}
-                            <button
-                                onClick={() => setShowGenerateModal(true)}
-                                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-                            >
-                                <Plus className="h-4 w-4" /> Generate Resume
-                            </button>
                         </div>
                     </div>
 
@@ -276,38 +212,12 @@ export default function AdminResumes({
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-end gap-1">
                                                     <button
-                                                        onClick={() => openPreview(resume.job_seeker_id, resume.template)}
+                                                        onClick={() => openPreview(resume.job_seeker_id, resume.template, resume)}
                                                         className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                                                         title="Preview"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </button>
-                                                    <Link
-                                                        href={route('admin.resumes.download', resume.id)}
-                                                        className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                                        title="Download PDF"
-                                                    >
-                                                        <Download className="h-4 w-4" />
-                                                    </Link>
-                                                    <Link
-                                                        href={route('admin.resumes.regenerate', resume.id)}
-                                                        method="post"
-                                                        as="button"
-                                                        className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                                                        title="Regenerate"
-                                                    >
-                                                        <RefreshCw className="h-4 w-4" />
-                                                    </Link>
-                                                    <Link
-                                                        href={route('admin.resumes.delete', resume.id)}
-                                                        method="delete"
-                                                        as="button"
-                                                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                        title="Delete"
-                                                        onClick={(e) => !confirm('Delete this resume? This action cannot be undone.') && e.preventDefault()}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Link>
                                                 </div>
                                             </td>
                                         </tr>
@@ -370,162 +280,7 @@ export default function AdminResumes({
                 </div>
             </div>
 
-            {/* Generate Modal */}
-            {showGenerateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowGenerateModal(false); setSelectedSeekerId(''); }}>
-                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl mx-4" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-slate-900">Generate Resume</h3>
-                            <button onClick={() => { setShowGenerateModal(false); setSelectedSeekerId(''); }} className="p-1 rounded-lg hover:bg-slate-100">
-                                <XCircle className="h-5 w-5 text-slate-400" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleGenerate}>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Select Job Seeker</label>
-                                <select
-                                    value={selectedSeekerId}
-                                    onChange={(e) => setSelectedSeekerId(e.target.value)}
-                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    required
-                                >
-                                    <option value="">-- Select Job Seeker --</option>
-                                    {jobSeekersWithoutResume?.map(seeker => (
-                                        <option key={seeker.id} value={seeker.id}>
-                                            {seeker.first_name} {seeker.last_name} ({seeker.email})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Resume Template</label>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {Object.entries(templates ?? {}).map(([key, label]) => (
-                                        <label
-                                            key={key}
-                                            className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                                                selectedTemplate === key
-                                                    ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
-                                                    : 'border-slate-200 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="template"
-                                                value={key}
-                                                checked={selectedTemplate === key}
-                                                onChange={() => setSelectedTemplate(key)}
-                                                className="text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <div>
-                                                <p className="text-sm font-medium text-slate-800">{label}</p>
-                                                <p className="text-xs text-slate-400">{key}</p>
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                            {selectedSeekerId && (
-                                <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => openPreview(selectedSeekerId, selectedTemplate)}
-                                        className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-800"
-                                    >
-                                        <Eye className="h-4 w-4" /> Preview with this template
-                                    </button>
-                                </div>
-                            )}
-                            {generateError && (
-                                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
-                                    <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                                    <p className="text-xs text-red-700">{generateError}</p>
-                                </div>
-                            )}
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowGenerateModal(false); setSelectedSeekerId(''); setGenerateError(''); }}
-                                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!selectedSeekerId || generating}
-                                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : 'Generate'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
-            {/* Bulk Generate Modal */}
-            {showBulkModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBulkModal(false)}>
-                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl mx-4" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-slate-900">Bulk Generate Resumes</h3>
-                            <button onClick={() => setShowBulkModal(false)} className="p-1 rounded-lg hover:bg-slate-100">
-                                <XCircle className="h-5 w-5 text-slate-400" />
-                            </button>
-                        </div>
-                        <p className="text-sm text-slate-500 mb-4">
-                            Select job seekers to generate resumes for. {jobSeekersWithoutResume?.length ?? 0} seekers without resumes.
-                        </p>
-                        <div className="mb-4 max-h-60 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
-                            {jobSeekersWithoutResume?.map(seeker => (
-                                <label
-                                    key={seeker.id}
-                                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50 ${
-                                        selectedSeekers.includes(seeker.id) ? 'bg-blue-50' : ''
-                                    }`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedSeekers.includes(seeker.id)}
-                                        onChange={() => toggleSeeker(seeker.id)}
-                                        className="text-blue-600 focus:ring-blue-500 rounded"
-                                    />
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-800">
-                                            {seeker.first_name} {seeker.last_name}
-                                        </p>
-                                        <p className="text-xs text-slate-400">{seeker.email}</p>
-                                    </div>
-                                </label>
-                            ))}
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Template</label>
-                            <select
-                                value={selectedTemplate}
-                                onChange={(e) => setSelectedTemplate(e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                            >
-                                {Object.entries(templates ?? {}).map(([key, label]) => (
-                                    <option key={key} value={key}>{label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex justify-end gap-3">
-                            <button onClick={() => setShowBulkModal(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleBulkGenerate}
-                                disabled={selectedSeekers.length === 0 || generating}
-                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : `Generate (${selectedSeekers.length})`}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Preview Modal */}
             {showPreviewModal && (
@@ -539,9 +294,33 @@ export default function AdminResumes({
                                     <span className="text-sm text-slate-500">— {previewData.seeker_name}</span>
                                 )}
                             </div>
-                            <button onClick={() => setShowPreviewModal(false)} className="p-1 rounded-lg hover:bg-slate-100">
-                                <XCircle className="h-5 w-5 text-slate-400" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {previewData?.html && (
+                                    <>
+                                        <button
+                                            onClick={handlePrintResume}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                        >
+                                            <Printer className="h-4 w-4" />
+                                            Print
+                                        </button>
+                                        {selectedResume?.id && (
+                                            <a
+                                                href={route('admin.resumes.download', selectedResume.id)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                Download PDF
+                                            </a>
+                                        )}
+                                    </>
+                                )}
+                                <button onClick={() => setShowPreviewModal(false)} className="p-1 rounded-lg hover:bg-slate-100">
+                                    <XCircle className="h-5 w-5 text-slate-400" />
+                                </button>
+                            </div>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 bg-slate-100">
                             {previewLoading && (

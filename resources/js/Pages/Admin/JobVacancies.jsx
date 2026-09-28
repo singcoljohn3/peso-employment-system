@@ -1,11 +1,12 @@
-import { Head, usePage, useForm, Link } from '@inertiajs/react';
+import { Head, usePage, useForm, Link, router } from '@inertiajs/react';
 import AdminLayouts from '@/Layouts/AdminLayouts';
 import { useState } from 'react';
-import { Plus, X, MapPin, Building2, Home, Briefcase, DollarSign, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, MapPin, Building2, Home, Briefcase, DollarSign, Clock, ChevronLeft, ChevronRight, Trash2, AlertTriangle } from 'lucide-react';
 
 export default function JobVacancies() {
     const { jobs, barangays, establishments, region, municipality } = usePage().props;
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [deleteModal, setDeleteModal] = useState({ show: false, job: null });
 
     // Get pagination data
     const jobList = jobs?.data || [];
@@ -19,6 +20,18 @@ export default function JobVacancies() {
         establishment_id: '',
         barangay_id: '',
     });
+
+    const handleDelete = (job) => {
+        setDeleteModal({ show: true, job });
+    };
+
+    const confirmDelete = () => {
+        if (!deleteModal.job) return;
+        router.delete(route('admin.jobvacancies.destroy', deleteModal.job.id), {
+            onSuccess: () => setDeleteModal({ show: false, job: null }),
+            onError: () => setDeleteModal({ show: false, job: null }),
+        });
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -34,8 +47,8 @@ export default function JobVacancies() {
         <AdminLayouts>
             <Head title="Job Vacancies" />
             {/* Page Header Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
+            <div className="mb-6">
+                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200 max-w-xs">
                     <div className="flex items-center gap-4">
                         <div className="bg-blue-100 p-3 rounded-lg">
                             <Briefcase className="h-6 w-6 text-blue-600" />
@@ -43,28 +56,6 @@ export default function JobVacancies() {
                         <div>
                             <p className="text-slate-500 text-sm">Total Job Vacancies</p>
                             <p className="text-2xl font-bold text-slate-800">{jobs?.total || 0}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 p-3 rounded-lg">
-                            <Building2 className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-slate-500 text-sm">Municipality</p>
-                            <p className="text-2xl font-bold text-slate-800">{municipality}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 p-3 rounded-lg">
-                            <Home className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-slate-500 text-sm">Barangays</p>
-                            <p className="text-2xl font-bold text-slate-800">{barangays?.length || 0}</p>
                         </div>
                     </div>
                 </div>
@@ -78,13 +69,6 @@ export default function JobVacancies() {
                         <h2 className="text-xl font-bold text-slate-800">Job Vacancies List</h2>
                         <p className="text-sm text-slate-500 mt-1">Manage job vacancies in {municipality}, {region}</p>
                     </div>
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
-                    >
-                        <Plus className="h-5 w-5" />
-                        Add Job Vacancy
-                    </button>
                 </div>
 
                 {/* Table */}
@@ -119,6 +103,7 @@ export default function JobVacancies() {
                                             Type
                                         </div>
                                     </th>
+                                    <th className="px-5 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -163,6 +148,15 @@ export default function JobVacancies() {
                                                 {job.employment_type || 'N/A'}
                                             </span>
                                         </td>
+                                        <td className="px-5 py-4 text-right">
+                                            <button
+                                                onClick={() => handleDelete(job)}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete job vacancy"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -174,7 +168,6 @@ export default function JobVacancies() {
                             <Briefcase className="h-12 w-12 text-slate-400" />
                         </div>
                         <p className="text-slate-600 font-medium">No job vacancies found</p>
-                        <p className="text-slate-400 text-sm mt-1">Click "Add Job Vacancy" to get started</p>
                     </div>
                 )}
 
@@ -257,6 +250,43 @@ export default function JobVacancies() {
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal.show && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="p-6 text-center">
+                            <div className="mx-auto w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                                <AlertTriangle className="h-7 w-7 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Job Vacancy</h3>
+                            <p className="text-sm text-slate-500 mb-1">
+                                Are you sure you want to delete this job vacancy?
+                            </p>
+                            <p className="text-sm font-semibold text-slate-700">
+                                "{deleteModal.job?.job_title}"
+                            </p>
+                            <p className="text-xs text-red-500 mt-3">
+                                This will also delete all associated applications.
+                            </p>
+                        </div>
+                        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteModal({ show: false, job: null })}
+                                className="px-4 py-2 text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Add Job Vacancy Modal */}
             {isModalOpen && (

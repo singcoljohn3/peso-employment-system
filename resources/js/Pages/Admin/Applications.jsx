@@ -326,18 +326,17 @@ export default function Applications() {
                                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Company</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Applied Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {apps.map((app, index) => {
-                                    const seeker = app.jobSeeker;
+                                    const seeker = app.job_seeker;
                                     const job = app.job;
                                     const establishment = app.establishment || job?.establishment;
                                     const statusBadge = getStatusBadge(app.status);
                                     const firstInitial = seeker?.first_name?.[0] ?? '';
                                     const lastInitial = seeker?.last_name?.[0] ?? '';
-                                    const fullName = seeker ? `${seeker.first_name} ${seeker.last_name}` : 'Unknown';
+                                    const fullName = seeker ? `${seeker.first_name} ${seeker.last_name}` : 'Applicant Not Found';
 
                                     return (
                                         <tr key={app.id} className={`hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
@@ -378,40 +377,6 @@ export default function Applications() {
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadge.style}`}>
                                                     {statusBadge.label}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => handleViewDetails(app)}
-                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleUpdateStatus(app)}
-                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                        title="Update Status"
-                                                    >
-                                                        <CheckCircle className="h-4 w-4" />
-                                                    </button>
-                                                    {app.resume && (
-                                                        <button
-                                                            onClick={() => handleDownloadResume(app)}
-                                                            className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                                            title="Download Resume"
-                                                        >
-                                                            <Download className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleDelete(app)}
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Delete Application"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -516,7 +481,7 @@ export default function Applications() {
                         </div>
                         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                             {(() => {
-                                const seeker = selectedApplication.jobSeeker;
+                                const seeker = selectedApplication.job_seeker;
                                 const job = selectedApplication.job;
                                 const establishment = selectedApplication.establishment || job?.establishment;
                                 const statusBadge = getStatusBadge(selectedApplication.status);

@@ -15,7 +15,6 @@ class EstablishmentLocationController extends Controller
         $query = Establishment::with(['barangay', 'jobs' => function ($q) {
             $q->whereIn('hiring_status', ['Open', 'Hiring']);
         }])
-            ->withLocation()
             ->withCount(['jobs as available_jobs_count' => function ($q) {
                 $q->whereIn('hiring_status', ['Open', 'Hiring']);
             }]);
@@ -185,6 +184,46 @@ class EstablishmentLocationController extends Controller
             ->selectRaw("*, {$haversine} AS distance")
             ->having('distance', '<=', $radius)
             ->orderBy('distance')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $establishments,
+        ]);
+    }
+
+    public function show($id)
+    {
+        $establishment = Establishment::with(['barangay', 'jobs' => function ($q) {
+            $q->whereIn('hiring_status', ['Open', 'Hiring']);
+        }])
+            ->withCount(['jobs as available_jobs_count' => function ($q) {
+                $q->whereIn('hiring_status', ['Open', 'Hiring']);
+            }])
+            ->findOrFail($id);
+
+        $establishment->logo_url = $establishment->logo
+            ? (str_starts_with($establishment->logo, 'http') ? $establishment->logo : url('storage/' . $establishment->logo))
+            : null;
+        $establishment->barangay_name = $establishment->barangay?->barangay_name;
+        $establishment->hiring_status = $establishment->jobs->isNotEmpty() ? 'hiring' : 'not hiring';
+
+        return response()->json([
+            'success' => true,
+            'data' => $establishment,
+        ]);
+    }
+
+    public function hiring(Request $request)
+    {
+        $establishments = Establishment::with(['barangay', 'jobs' => function ($q) {
+            $q->whereIn('hiring_status', ['Open', 'Hiring']);
+        }])
+            ->withCount(['jobs as available_jobs_count' => function ($q) {
+                $q->whereIn('hiring_status', ['Open', 'Hiring']);
+            }])
+            ->having('available_jobs_count', '>', 0)
+            ->orderBy('company_name')
             ->get();
 
         return response()->json([

@@ -1,5 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Link, usePage, router } from '@inertiajs/react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     LayoutDashboard,
     Briefcase,
@@ -17,7 +17,14 @@ import {
     User,
     Search,
     Calendar,
-    Shield
+    Shield,
+    Clock,
+    CalendarCheck,
+    CalendarX,
+    CalendarClock,
+    AlertCircle,
+    CheckCircle,
+    Check
 } from 'lucide-react';
 
 export default function EstablishmentLayouts({ header, children }) {
@@ -26,6 +33,89 @@ export default function EstablishmentLayouts({ header, children }) {
     const establishment = estData ?? null;
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [notificationOpen, setNotificationOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const response = await fetch('/api/notifications', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unread_count || 0);
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications:', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
+
+    const markAsRead = async (id) => {
+        try {
+            const response = await fetch(`/api/notifications/${id}/read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''),
+                },
+                credentials: 'same-origin',
+            });
+            if (response.ok) {
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            console.error('Failed to mark as read:', error);
+        }
+    };
+
+    const getNotifIcon = (type) => {
+        switch (type) {
+            case 'new_application': return <User className="h-4 w-4 text-blue-600" />;
+            case 'interview_scheduled': return <CalendarCheck className="h-4 w-4 text-green-600" />;
+            case 'interview_cancelled': return <CalendarX className="h-4 w-4 text-red-600" />;
+            case 'interview_rescheduled': return <CalendarClock className="h-4 w-4 text-orange-600" />;
+            case 'application_status': return <UserCheck className="h-4 w-4 text-purple-600" />;
+            default: return <Bell className="h-4 w-4 text-slate-600" />;
+        }
+    };
+
+    const getNotifBg = (type) => {
+        switch (type) {
+            case 'new_application': return 'bg-blue-100';
+            case 'interview_scheduled': return 'bg-green-100';
+            case 'interview_cancelled': return 'bg-red-100';
+            case 'interview_rescheduled': return 'bg-orange-100';
+            case 'application_status': return 'bg-purple-100';
+            default: return 'bg-slate-100';
+        }
+    };
+
+    const formatTimeAgo = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
 
     const navItems = [
         {
@@ -69,6 +159,7 @@ export default function EstablishmentLayouts({ header, children }) {
             href: route('establishment.notifications'),
             active: route().current('establishment.notifications'),
             icon: Bell,
+            badge: unreadCount,
         },
         {
             label: 'Settings',
@@ -102,14 +193,14 @@ export default function EstablishmentLayouts({ header, children }) {
                         {/* Logo Area */}
                         <div className="flex items-center gap-3 border-b border-slate-200/50 px-6 py-6">
                             <div className="relative">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-navy-800 shadow-lg shadow-blue-700/30">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-navy-800 shadow-lg">
                                     <Building2 className="h-7 w-7 text-white" />
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-white"></div>
                             </div>
                             <div>
-                                <p className="text-lg font-bold text-slate-900 tracking-tight">Establishment Portal</p>
-                                <p className="text-xs text-slate-500">Employment Services</p>
+                                <p className="text-lg font-bold text-slate-900 tracking-tight">ESTABLISHMENT</p>
+                                <p className="text-xs text-slate-500">Establishment Portal</p>
                             </div>
                         </div>
 
@@ -132,7 +223,16 @@ export default function EstablishmentLayouts({ header, children }) {
                                         >
                                             <Icon className={`h-5 w-5 shrink-0 ${item.active ? 'text-white' : 'text-slate-400'}`} />
                                             <span className="flex-1">{item.label}</span>
-                                            {item.active && (
+                                            {item.badge > 0 && (
+                                                <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold ${
+                                                    item.active
+                                                        ? 'bg-white/20 text-white'
+                                                        : 'bg-red-500 text-white'
+                                                }`}>
+                                                    {item.badge > 99 ? '99+' : item.badge}
+                                                </span>
+                                            )}
+                                            {item.active && !item.badge && (
                                                 <ChevronRight className="h-4 w-4 text-white/80" />
                                             )}
                                         </Link>
@@ -168,8 +268,8 @@ export default function EstablishmentLayouts({ header, children }) {
                                     <Building2 className="h-6 w-6 text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-lg font-bold text-slate-900">Establishment Portal</p>
-                                    <p className="text-xs text-slate-500">Employment Services</p>
+                                    <p className="text-lg font-bold text-slate-900">ESTABLISHMENT</p>
+                                    <p className="text-xs text-slate-500">Establishment Portal</p>
                                 </div>
                             </div>
                             <button
@@ -198,7 +298,16 @@ export default function EstablishmentLayouts({ header, children }) {
                                             }`}
                                         >
                                             <Icon className={`h-5 w-5 shrink-0 ${item.active ? 'text-white' : 'text-slate-400'}`} />
-                                            <span>{item.label}</span>
+                                            <span className="flex-1">{item.label}</span>
+                                            {item.badge > 0 && (
+                                                <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold ${
+                                                    item.active
+                                                        ? 'bg-white/20 text-white'
+                                                        : 'bg-red-500 text-white'
+                                                }`}>
+                                                    {item.badge > 99 ? '99+' : item.badge}
+                                                </span>
+                                            )}
                                         </Link>
                                     );
                                 })}
@@ -233,8 +342,8 @@ export default function EstablishmentLayouts({ header, children }) {
                                     )}
                                 </button>
                                 <div>
-                                    <h1 className="text-lg font-bold text-slate-900 tracking-tight">Establishment Dashboard</h1>
-                                    <p className="text-xs text-slate-500">Employment Management System</p>
+                                    <h1 className="text-lg font-bold text-slate-900 tracking-tight">Establishment Portal</h1>
+                                    <p className="text-xs text-slate-500">ESTABLISHMENT</p>
                                 </div>
                             </div>
 
@@ -260,36 +369,86 @@ export default function EstablishmentLayouts({ header, children }) {
                                 {/* Notification */}
                                 <div className="relative">
                                     <button
-                                        onClick={() => setNotificationOpen(!notificationOpen)}
+                                        onClick={() => {
+                                            setNotificationOpen(!notificationOpen);
+                                            if (!notificationOpen) fetchNotifications();
+                                        }}
                                         className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 transition-colors relative"
                                     >
                                         <Bell className="h-5 w-5" />
-                                        <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"></span>
+                                        {unreadCount > 0 && (
+                                            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-lg">
+                                                {unreadCount > 9 ? '9+' : unreadCount}
+                                            </span>
+                                        )}
                                     </button>
                                     {notificationOpen && (
-                                        <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50">
-                                            <p className="text-sm font-semibold text-slate-900 mb-3">Notifications</p>
-                                            <div className="space-y-2">
-                                                <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50">
-                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                                                        <Briefcase className="h-4 w-4 text-blue-600" />
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setNotificationOpen(false)}
+                                            />
+                                            <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
+                                                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                                                        {unreadCount > 0 && (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                                                {unreadCount}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs font-medium text-slate-900">New applicant received</p>
-                                                        <p className="text-xs text-slate-500">1 hour ago</p>
-                                                    </div>
+                                                    <Link
+                                                        href={route('establishment.notifications')}
+                                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                    >
+                                                        View all
+                                                    </Link>
                                                 </div>
-                                                <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50">
-                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-                                                        <UserCheck className="h-4 w-4 text-green-600" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-medium text-slate-900">Interview scheduled</p>
-                                                        <p className="text-xs text-slate-500">3 hours ago</p>
-                                                    </div>
+                                                <div className="max-h-80 overflow-y-auto">
+                                                    {notifications.length > 0 ? (
+                                                        notifications.slice(0, 8).map((notif) => {
+                                                            const isUnread = !notif.read_at;
+                                                            return (
+                                                                <div
+                                                                    key={notif.id}
+                                                                    className={`flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-100 last:border-0 ${
+                                                                        isUnread ? 'bg-blue-50/50' : ''
+                                                                    }`}
+                                                                    onClick={() => {
+                                                                        if (isUnread) markAsRead(notif.id);
+                                                                    }}
+                                                                >
+                                                                    <div className={`p-2 rounded-full shrink-0 ${getNotifBg(notif.type)}`}>
+                                                                        {getNotifIcon(notif.type)}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className={`text-xs font-medium ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>
+                                                                            {notif.title}
+                                                                        </p>
+                                                                        <p className="text-xs text-slate-500 truncate mt-0.5">
+                                                                            {notif.message}
+                                                                        </p>
+                                                                        <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                                                                            <Clock className="h-2.5 w-2.5" />
+                                                                            {formatTimeAgo(notif.created_at)}
+                                                                        </p>
+                                                                    </div>
+                                                                    {isUnread && (
+                                                                        <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1"></span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <div className="px-4 py-8 text-center">
+                                                            <Bell className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                                                            <p className="text-xs text-slate-500">No notifications yet</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </div>
+                                        </>
                                     )}
                                 </div>
 
@@ -299,8 +458,18 @@ export default function EstablishmentLayouts({ header, children }) {
                                         <p className="text-sm font-semibold text-slate-900">{establishment?.company_name ?? user?.name ?? 'Company'}</p>
                                         <p className="text-xs text-slate-500">{establishment?.contact_person ?? 'Establishment'}</p>
                                     </div>
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-700 to-navy-800 shadow-lg shadow-blue-700/30">
-                                        <User className="h-5 w-5 text-white" />
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden shadow-lg">
+                                        {establishment?.logo ? (
+                                            <img
+                                                src={`/storage/${establishment.logo}`}
+                                                alt={establishment.company_name}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-700 to-navy-800">
+                                                <User className="h-5 w-5 text-white" />
+                                            </div>
+                                        )}
                                     </div>
                                     <Link
                                         href={route('establishment.logout')}

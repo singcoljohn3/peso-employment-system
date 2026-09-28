@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_active',
     ];
 
     /**
@@ -48,12 +49,18 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
     public function establishment(): HasOne
     {
         return $this->hasOne(Establishment::class);
+    }
+
+    public function agency(): HasOne
+    {
+        return $this->hasOne(Agency::class);
     }
 
     public function jobSeeker(): HasOne
