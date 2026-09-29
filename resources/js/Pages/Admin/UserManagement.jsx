@@ -213,53 +213,83 @@ export default function UserManagement() {
                         <table className="w-full">
                             <thead className="bg-slate-100">
                                 <tr>
-                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">ID</th>
-                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name</th>
-                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Email</th>
-                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Role</th>
+                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Name / Agency</th>
+                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Contact Person</th>
+                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Contact Details</th>
+                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Role & Status</th>
+                                    <th className="px-5 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Date Created</th>
                                     <th className="px-5 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {userList.map((u, index) => (
+                                {userList.map((u, index) => {
+                                    const isAgency = u.role === 'agency';
+                                    const isEstab = u.role === 'Establishment';
+                                    const orgName = isAgency ? u.agency?.agency_name : (isEstab ? u.establishment?.company_name : u.name);
+                                    const contactPerson = isAgency ? u.agency?.contact_person : (isEstab ? u.establishment?.contact_person : u.name);
+                                    const contactNumber = isAgency ? u.agency?.contact_number : (isEstab ? u.establishment?.contact_number : 'N/A');
+                                    const status = u.is_active !== 0 ? 'Active' : 'Disabled';
+                                    const dateCreated = new Date(u.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+                                    return (
                                     <tr key={u.id} className={`hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
-                                        <td className="px-5 py-4">
-                                            <span className="inline-flex items-center justify-center bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">#{u.id}</span>
-                                        </td>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                                    {(u.name || 'U').charAt(0).toUpperCase()}
+                                                    {(orgName || 'U').charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-slate-800">{u.name}</p>
+                                                    <p className="text-sm font-bold text-slate-800">{orgName}</p>
+                                                    <p className="text-xs text-slate-500">ID: #{u.id}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <Mail className="h-4 w-4 text-slate-400" />
-                                                <span className="text-sm text-slate-700">{u.email}</span>
+                                            <p className="text-sm text-slate-800 font-medium">{contactPerson}</p>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                                    <span className="text-sm text-slate-700">{u.email}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="h-3.5 w-3.5 flex items-center justify-center text-slate-400 font-bold text-[10px]">📞</span>
+                                                    <span className="text-xs text-slate-600">{contactNumber}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${roleBadge(u.role)}`}>
-                                                <User className="h-3 w-3" />
-                                                {roleLabel(u.role)}
-                                            </span>
+                                            <div className="flex flex-col gap-1.5 items-start">
+                                                <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${roleBadge(u.role)}`}>
+                                                    <User className="h-3 w-3" />
+                                                    {roleLabel(u.role)}
+                                                </span>
+                                                <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded ${status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {status}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <span className="text-sm text-slate-600">{dateCreated}</span>
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            <button
-                                                onClick={() => handleDeactivate(u.id, u.name)}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                                                title="Deactivate user"
-                                            >
-                                                <UserMinus className="h-3.5 w-3.5" />
-                                                Deactivate
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors" title="View">
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeactivate(u.id, u.name)}
+                                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${status === 'Active' ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}
+                                                    title={status === 'Active' ? "Disable user" : "Enable user"}
+                                                >
+                                                    <UserMinus className="h-3.5 w-3.5" />
+                                                    {status === 'Active' ? 'Disable' : 'Enable'}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))}
+                                )})}
                             </tbody>
                         </table>
                     </div>

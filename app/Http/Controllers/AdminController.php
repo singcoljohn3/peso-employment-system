@@ -782,7 +782,8 @@ class AdminController extends Controller
      */
     public function userManagement(): Response
     {
-        $users = User::whereNot('role', 'job_seeker')
+        $users = User::with(['agency', 'establishment'])
+            ->whereNot('role', 'job_seeker')
             ->orderBy('id', 'desc')
             ->paginate(10);
 
