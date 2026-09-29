@@ -260,8 +260,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/notifications', function () {
         $user = Auth::user();
         $rows = \Illuminate\Support\Facades\DB::table('notifications')
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get()
@@ -278,8 +277,7 @@ Route::middleware(['auth'])->group(function () {
                 ];
             });
         $unreadCount = \Illuminate\Support\Facades\DB::table('notifications')
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->whereNull('read_at')
             ->count();
         return response()->json([
