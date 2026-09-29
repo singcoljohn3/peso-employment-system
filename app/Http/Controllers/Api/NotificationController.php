@@ -14,8 +14,7 @@ class NotificationController extends Controller
         $user = Auth::user();
 
         $notifications = DB::table('notifications')
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -29,8 +28,7 @@ class NotificationController extends Controller
         });
 
         $unreadCount = DB::table('notifications')
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->whereNull('read_at')
             ->count();
 
@@ -49,8 +47,7 @@ class NotificationController extends Controller
 
         DB::table('notifications')
             ->where('id', $id)
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->update(['read_at' => now()]);
 
         return response()->json(['message' => 'Notification marked as read.']);
@@ -61,8 +58,7 @@ class NotificationController extends Controller
         $user = Auth::user();
 
         DB::table('notifications')
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
