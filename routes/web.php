@@ -380,11 +380,11 @@ Route::middleware(['auth', 'establishment'])->group(function () {
 // ═══════════════════════════════════════════════════════════════
 Route::middleware('guest')->group(function () {
     // Agency Account Creation moved to Admin -> User Management
-    // Route::get('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerCreate'])
-    //     ->name('agency.register');
-    // Route::post('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerStore'])
-    //     ->middleware('throttle:10,1')
-    //     ->name('agency.register.store');
+    // Redirect /agency/register to login page — self-registration is disabled
+    Route::get('/agency/register', function () {
+        return redirect()->route('agency.login');
+    })->name('agency.register');
+
     Route::get('/agency/login', [App\Http\Controllers\AgencyController::class, 'loginCreate'])
         ->name('agency.login');
     Route::post('/agency/login', [App\Http\Controllers\AgencyController::class, 'loginStore'])
