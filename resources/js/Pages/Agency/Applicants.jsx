@@ -166,9 +166,13 @@ export default function Applicants({ applications, agency, statistics, jobs }) {
                         </div>
                         <div className="p-6 space-y-4">
                             <div className="flex items-center gap-4 mb-4">
-                                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
-                                    {viewApplicant.seeker_profile?.full_name?.charAt(0) ?? '?'}
-                                </div>
+                                {viewApplicant.seeker_profile?.photo_url ? (
+                                    <img src={`/storage/${viewApplicant.seeker_profile.photo_url}`} alt="Profile" className="h-16 w-16 rounded-full object-cover shadow-sm border-2 border-white" />
+                                ) : (
+                                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-sm border-2 border-white">
+                                        {viewApplicant.seeker_profile?.full_name?.charAt(0) ?? '?'}
+                                    </div>
+                                )}
                                 <div>
                                     <h3 className="text-lg font-semibold text-slate-900">{viewApplicant.seeker_profile?.full_name ?? 'Unknown'}</h3>
                                     <p className="text-sm text-slate-500">{viewApplicant.job?.job_title ?? '—'}</p>

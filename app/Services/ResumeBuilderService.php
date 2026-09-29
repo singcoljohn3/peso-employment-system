@@ -276,6 +276,10 @@ class ResumeBuilderService
             ?: $jobSeeker->preferred_template
             ?: 'modern-professional';
 
+        if (isset(ResumeService::TEMPLATE_ALIASES[$template])) {
+            $template = ResumeService::TEMPLATE_ALIASES[$template];
+        }
+
         return array_key_exists($template, ResumeService::TEMPLATES)
             ? $template
             : 'modern-professional';
@@ -438,7 +442,7 @@ class ResumeBuilderService
             'hidden' => $design['hidden_sections'],
         ])->render();
 
-        $html = view('resumes.templates.' . $template, [
+        $html = view(app(ResumeService::class)->viewFor($template), [
             'data' => $data,
             'design' => $design,
             'sections' => $sections,
@@ -490,6 +494,10 @@ class ResumeBuilderService
         array $content,
         array $design
     ): MemberResume {
+        if (isset(ResumeService::TEMPLATE_ALIASES[$template])) {
+            $template = ResumeService::TEMPLATE_ALIASES[$template];
+        }
+
         $template = array_key_exists($template, ResumeService::TEMPLATES)
             ? $template
             : 'modern-professional';

@@ -16,8 +16,10 @@ const LAYOUTS = {
     'formal-corporate': { columns: 'single', header: 'solid', accent: '#1e293b', note: 'Dark solid header' },
     'formal-elegant': { columns: 'single', header: 'cream', accent: '#8b5e3c', note: 'Cream & bronze' },
     'formal-executive': { columns: 'two', header: 'sidebar', accent: '#1a1a2e', note: 'Navy sidebar, gold titles' },
-    'formal-professional': { columns: 'single', header: 'solid', accent: '#0f3b5e', note: 'Navy & light blue' },
-    'formal-traditional': { columns: 'single', header: 'centered', accent: '#2c2c2c', note: 'Traditional serif look' },
+    'clean-modern': { columns: 'single', header: 'plain', accent: '#0f766e', note: 'Clean teal lines & cards' },
+    'two-column-professional': { columns: 'two', header: 'sidebar', accent: '#0f3b5e', note: 'Two-column corporate grid' },
+    'formal-professional': { columns: 'single', header: 'plain', accent: '#0f766e', note: 'Clean teal lines & cards' },
+    'formal-traditional': { columns: 'two', header: 'sidebar', accent: '#0f3b5e', note: 'Two-column corporate grid' },
 };
 
 export { LAYOUTS };

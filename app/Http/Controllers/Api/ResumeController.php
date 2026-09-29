@@ -78,7 +78,7 @@ class ResumeController extends Controller
         $data = $this->resumeService->buildResumeData($jobSeeker);
 
         try {
-            $html = view('resumes.templates.' . $template, ['data' => $data])->render();
+            $html = view($this->resumeService->viewFor($template), ['data' => $data])->render();
         } catch (\Exception $e) {
             $html = null;
         }
@@ -209,6 +209,11 @@ class ResumeController extends Controller
             'ats-friendly' => 'Plain black/white ATS-optimized format for automated screening systems.',
             'creative' => 'Vibrant purple sidebar design for creative industry roles.',
             'minimalist' => 'Clean minimal design with uppercase headers and subtle styling.',
+            'formal-corporate' => 'Dark solid header with formal section rules, suited to corporate and supervisory roles.',
+            'formal-elegant' => 'Cream and bronze serif styling with an elegant, understated feel.',
+            'formal-executive' => 'Navy sidebar with gold section titles for senior leadership profiles.',
+            'clean-modern' => 'Clean teal accent lines and cards for a modern professional look.',
+            'two-column-professional' => 'Centred traditional layout ideal for long careers and detailed histories.',
             default => '',
         };
     }

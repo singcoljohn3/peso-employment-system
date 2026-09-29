@@ -22,6 +22,7 @@ class Job extends Model
 
     protected $fillable = [
         'establishment_id',
+        'agency_id',
         'job_title',
         'description',
         'responsibilities',
@@ -71,5 +72,10 @@ class Job extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
     }
 }

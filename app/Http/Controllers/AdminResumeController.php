@@ -112,7 +112,7 @@ class AdminResumeController extends Controller
 
         try {
             $data = $this->resumeService->buildResumeData($jobSeeker);
-            $html = view('resumes.templates.' . $validated['template'], ['data' => $data])->render();
+            $html = view($this->resumeService->viewFor($validated['template']), ['data' => $data])->render();
 
             return response()->json([
                 'html' => $html,

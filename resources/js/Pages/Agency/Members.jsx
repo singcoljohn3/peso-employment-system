@@ -40,6 +40,15 @@ function FormSelect({ label, value, onChange, children, placeholder = 'Select an
     );
 }
 
+function getPhotoUrl(photoUrl) {
+    if (!photoUrl) return null;
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://') || photoUrl.startsWith('data:')) {
+        return photoUrl;
+    }
+    const clean = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
+    return clean.startsWith('/storage/') ? clean : `/storage/${photoUrl}`;
+}
+
 export default function Members({ activeMembers, inactiveMembers, statistics, agency, jobs, barangays }) {
     const { flash } = usePage().props;
     const [activeTab, setActiveTab] = useState('active');
@@ -305,7 +314,23 @@ export default function Members({ activeMembers, inactiveMembers, statistics, ag
                                 onClick={() => openDetails(member)}
                             >
                                 <div className="flex items-start gap-4 mb-4">
-                                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm">
+                                    {member.photo_url ? (
+                                        <img
+                                            src={getPhotoUrl(member.photo_url)}
+                                            alt={member.full_name}
+                                            className="h-12 w-12 rounded-full object-cover border border-slate-200 shrink-0 shadow-sm"
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                                if (e.currentTarget.nextElementSibling) {
+                                                    e.currentTarget.nextElementSibling.style.display = 'flex';
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div
+                                        style={{ display: member.photo_url ? 'none' : 'flex' }}
+                                        className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm"
+                                    >
                                         {member.full_name?.charAt(0) ?? '?'}
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -555,7 +580,23 @@ export default function Members({ activeMembers, inactiveMembers, statistics, ag
                         ) : (
                         <div className="p-6 space-y-5">
                             <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
+                                {viewMember.photo_url ? (
+                                    <img
+                                        src={getPhotoUrl(viewMember.photo_url)}
+                                        alt={viewMember.full_name}
+                                        className="h-16 w-16 rounded-full object-cover border-2 border-slate-200 shrink-0 shadow-sm"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            if (e.currentTarget.nextElementSibling) {
+                                                e.currentTarget.nextElementSibling.style.display = 'flex';
+                                            }
+                                        }}
+                                    />
+                                ) : null}
+                                <div
+                                    style={{ display: viewMember.photo_url ? 'none' : 'flex' }}
+                                    className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 items-center justify-center text-white text-xl font-bold shadow-sm shrink-0"
+                                >
                                     {viewMember.full_name?.charAt(0) ?? '?'}
                                 </div>
                                 <div>
@@ -638,7 +679,7 @@ export default function Members({ activeMembers, inactiveMembers, statistics, ag
                                     className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all shadow-sm"
                                 >
                                     <FileText className="h-4 w-4" />
-                                    View Resume
+                                    View / Edit Resume &amp; Templates
                                 </button>
                                 <button
                                     onClick={() => downloadResume(viewMember)}

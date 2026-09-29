@@ -1015,6 +1015,7 @@ class AgencyController extends Controller
             'educational_attainment' => ['nullable', 'string', 'max:255'],
             'work_experience' => ['nullable', 'string'],
             'job_id' => ['nullable', 'exists:job,id'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $user = $jobSeeker->user;
@@ -1043,7 +1044,7 @@ class AgencyController extends Controller
             $addressValue = $barangay->barangay_name;
         }
 
-        $jobSeeker->update([
+        $updateData = [
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $validated['email'],
@@ -1057,7 +1058,48 @@ class AgencyController extends Controller
             'barangay_id' => $validated['barangay_id'] ?? null,
             'educational_attainment' => $validated['educational_attainment'] ?? null,
             'remarks' => $validated['work_experience'] ?? null,
-        ]);
+        ];
+
+        if ($request->hasFile('photo')) {
+            if ($jobSeeker->photo_url) {
+                Storage::disk('public')->delete($jobSeeker->photo_url);
+            }
+            $updateData['photo_url'] = $request->file('photo')->store('job-seekers/photos', 'public');
+        }
+
+        $jobSeeker->update($updateData);
+
+        // Auto-sync existing MemberResume content if present
+        $memberResume = \App\Models\MemberResume::where('job_seeker_id', $jobSeeker->id)->first();
+        if ($memberResume && is_array($memberResume->content)) {
+            $c = $memberResume->content;
+            $c['full_name'] = $validated['full_name'];
+            $c['email'] = $validated['email'];
+            if (!empty($validated['contact_number'])) $c['contact_number'] = $validated['contact_number'];
+            if (!empty($addressValue)) $c['address'] = $addressValue;
+            if ($barangay) $c['barangay'] = $barangay->barangay_name;
+            if (!empty($validated['birthdate'])) $c['birthdate'] = $validated['birthdate'];
+            if (!empty($validated['sex'])) $c['sex'] = $validated['sex'];
+            if (!empty($validated['civil_status'])) $c['civil_status'] = $validated['civil_status'];
+            if (!empty($validated['occupation'])) $c['professional_title'] = $validated['occupation'];
+            if (!empty($validated['educational_attainment'])) {
+                $eduList = $c['educational_background'] ?? [];
+                if (empty($eduList)) {
+                    $eduList[] = ['level' => $validated['educational_attainment'], 'school' => '', 'year' => ''];
+                } else {
+                    $eduList[0]['level'] = $validated['educational_attainment'];
+                }
+                $c['educational_background'] = $eduList;
+            }
+            if (!empty($validated['work_experience'])) {
+                $expList = $c['work_experience'] ?? [];
+                if (empty($expList)) {
+                    $expList[] = ['position' => $validated['occupation'] ?? 'Experience', 'company' => '', 'years' => $validated['work_experience']];
+                }
+                $c['work_experience'] = $expList;
+            }
+            $memberResume->update(['content' => $c]);
+        }
 
         if (!empty($validated['job_id'])) {
             $existingApplication = Application::where('job_id', $validated['job_id'])
@@ -1084,7 +1126,7 @@ class AgencyController extends Controller
             }
         }
 
-        return back()->with('success', 'Member updated successfully.');
+        return back()->with('success', 'Member and resume updated successfully.');
     }
 
     private function isAgencyMember(Agency $agency, JobSeeker $jobSeeker): bool
@@ -1815,9 +1857,9 @@ class AgencyController extends Controller
             $resumeService = app(ResumeService::class);
             $data = $resumeService->buildResumeData($jobSeeker);
 
-            $template = $jobSeeker->resume?->template ?? $jobSeeker->preferred_template ?? 'modern-professional';
+            $template = $jobSeeker->resume?->template ?? $jobSeeker->preferred_template ?? ResumeService::DEFAULT_TEMPLATE;
 
-            $html = view('resumes.templates.' . $template, ['data' => $data])->render();
+            $html = view($resumeService->viewFor($template), ['data' => $data])->render();
 
             return response()->json([
                 'html' => $html,

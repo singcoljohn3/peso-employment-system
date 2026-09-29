@@ -15,6 +15,8 @@ import {
     Building2,
     Clock,
     Calendar,
+    ClipboardList,
+    CheckCircle
 } from 'lucide-react';
 
 export default function AgencyLayouts({ header, children }) {
@@ -85,7 +87,9 @@ export default function AgencyLayouts({ header, children }) {
     const navItems = [
         { label: 'Dashboard', href: route('agency.dashboard'), active: route().current('agency.dashboard'), icon: LayoutDashboard },
         { label: 'Job Vacancies', href: route('agency.jobs'), active: route().current('agency.jobs'), icon: Briefcase },
-        { label: 'Members', href: route('agency.members'), active: route().current('agency.members'), icon: UserPlus },
+        { label: 'Workers', href: route('agency.members'), active: route().current('agency.members'), icon: UserPlus },
+        { label: 'Applications', href: route('agency.applicants'), active: route().current('agency.applicants'), icon: ClipboardList },
+        { label: 'Hiring Status', href: route('agency.hiring-status'), active: route().current('agency.hiring-status'), icon: CheckCircle },
         { label: 'Reports', href: route('agency.reports'), active: route().current('agency.reports'), icon: BarChart3 },
         { label: 'Settings', href: route('agency.settings'), active: route().current('agency.settings'), icon: Settings },
     ];

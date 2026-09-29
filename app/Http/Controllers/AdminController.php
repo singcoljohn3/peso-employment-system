@@ -66,7 +66,21 @@ class AdminController extends Controller
                 ]);
             }
 
-            $role = Auth::user()->role;
+            $role = strtolower((string) Auth::user()->role);
+
+            if ($role === 'establishment') {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return redirect()->route('establishment.login')->with('status', 'Please log in through the Establishment portal.');
+            }
+
+            if ($role === 'agency') {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return redirect()->route('agency.login')->with('status', 'Please log in through the Agency portal.');
+            }
 
             if ($role === 'admin') {
                 return redirect()->intended(route('admin.dashboard', absolute: false));
@@ -74,10 +88,6 @@ class AdminController extends Controller
 
             if ($role === 'staff') {
                 return redirect()->intended(route('staff.dashboard', absolute: false));
-            }
-
-            if ($role === 'Establishment') {
-                return redirect()->intended(route('establishment.dashboard', absolute: false));
             }
 
             if ($role === 'job_seeker') {

@@ -8,6 +8,7 @@ use App\Models\Resume;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 use Illuminate\Validation\ValidationException;
 
 class ResumeService
@@ -21,8 +22,35 @@ class ResumeService
         'formal-corporate' => 'Formal Corporate',
         'formal-elegant' => 'Formal Elegant',
         'formal-executive' => 'Formal Executive',
-        'formal-professional' => 'Formal Professional',
-        'formal-traditional' => 'Formal Traditional',
+        'clean-modern' => 'Clean Modern',
+        'two-column-professional' => 'Two-Column Professional',
+    ];
+
+    public const TEMPLATE_ALIASES = [
+        'formal-professional' => 'clean-modern',
+        'formal-traditional' => 'two-column-professional',
+    ];
+
+    public const DEFAULT_TEMPLATE = 'modern-professional';
+
+    /**
+     * Blade view backing each template key.
+     *
+     * Most keys map to the view of the same name. The two renamed templates
+     * ("clean-modern" and "two-column-professional") keep their original
+     * blades instead of duplicating them, so the existing designs stay intact.
+     */
+    public const TEMPLATE_VIEWS = [
+        'modern-professional' => 'resumes.templates.modern-professional',
+        'simple-classic' => 'resumes.templates.simple-classic',
+        'ats-friendly' => 'resumes.templates.ats-friendly',
+        'creative' => 'resumes.templates.creative',
+        'minimalist' => 'resumes.templates.minimalist',
+        'formal-corporate' => 'resumes.templates.formal-corporate',
+        'formal-elegant' => 'resumes.templates.formal-elegant',
+        'formal-executive' => 'resumes.templates.formal-executive',
+        'clean-modern' => 'resumes.templates.formal-professional',
+        'two-column-professional' => 'resumes.templates.formal-traditional',
     ];
 
     public const REQUIRED_FIELDS = [
@@ -32,6 +60,36 @@ class ResumeService
         'contact_number' => 'Contact Number',
         'email' => 'Email',
     ];
+
+    /**
+     * Resolve a template identifier to the Blade view that renders it.
+     *
+     * Identifiers may come from user input, request query strings or the
+     * database, so legacy aliases are applied first, unknown values fall back
+     * to the default template, and the view is verified to exist. This keeps
+     * every render path (preview, edit and PDF export) on the same template
+     * without ever raising a "view not found" error.
+     */
+    public function viewFor(?string $template): string
+    {
+        $template = trim((string) $template);
+
+        if (isset(self::TEMPLATE_ALIASES[$template])) {
+            $template = self::TEMPLATE_ALIASES[$template];
+        }
+
+        if (! array_key_exists($template, self::TEMPLATES)) {
+            $template = self::DEFAULT_TEMPLATE;
+        }
+
+        $view = self::TEMPLATE_VIEWS[$template] ?? 'resumes.templates.' . $template;
+
+        if (! View::exists($view)) {
+            $view = self::TEMPLATE_VIEWS[self::DEFAULT_TEMPLATE];
+        }
+
+        return $view;
+    }
 
     public function validateRequiredFields(JobSeeker $jobSeeker): array
     {
@@ -121,14 +179,7 @@ class ResumeService
             $licenses = array_map('trim', array_filter($licenses));
         }
 
-        // Only include profile photo if the file actually exists on disk
-        $profilePhoto = null;
-        if ($jobSeeker->photo_url) {
-            $photoPath = storage_path('app/public/' . $jobSeeker->photo_url);
-            if (file_exists($photoPath)) {
-                $profilePhoto = $jobSeeker->photo_url;
-            }
-        }
+        $profilePhoto = !empty($jobSeeker->photo_url) ? $jobSeeker->photo_url : null;
 
         $fullName = trim(
             ($jobSeeker->first_name ?? '') . ' '
@@ -189,7 +240,7 @@ class ResumeService
         $template = $template ?? $jobSeeker->preferred_template ?? 'modern-professional';
         $data = $customContent ?? $this->buildResumeData($jobSeeker);
 
-        $view = 'resumes.templates.' . $template;
+        $view = $this->viewFor($template);
 
         $pdf = Pdf::loadView($view, ['data' => $data]);
         $pdf->setPaper('A4', 'portrait');
@@ -236,7 +287,7 @@ class ResumeService
         $template = $template ?? $resume->template;
         $data = $customContent ?? $this->buildResumeData($jobSeeker);
 
-        $view = 'resumes.templates.' . $template;
+        $view = $this->viewFor($template);
 
         $pdf = Pdf::loadView($view, ['data' => $data]);
         $pdf->setPaper('A4', 'portrait');
@@ -290,7 +341,7 @@ class ResumeService
     public function generatePreviewHtml(JobSeeker $jobSeeker, string $template): string
     {
         $data = $this->buildResumeData($jobSeeker);
-        $view = 'resumes.templates.' . $template;
+        $view = $this->viewFor($template);
 
         $pdf = Pdf::loadView($view, ['data' => $data]);
         $pdf->setPaper('A4', 'portrait');

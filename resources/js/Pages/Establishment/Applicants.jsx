@@ -367,9 +367,13 @@ export default function Applicants() {
                                     <div className="bg-gradient-to-r from-blue-600 to-emerald-600 px-6 py-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                                                    {firstInitial}{lastInitial}
-                                                </div>
+                                                {seeker?.photo_url ? (
+                                                    <img src={`/storage/${seeker.photo_url}`} alt="Profile" className="h-12 w-12 rounded-full object-cover shadow-lg border-2 border-white/20" />
+                                                ) : (
+                                                    <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                                                        {firstInitial}{lastInitial}
+                                                    </div>
+                                                )}
                                                 <div className="min-w-0 flex-1">
                                                     <h3 className="text-white font-bold text-lg truncate">
                                                         {seeker?.first_name} {seeker?.last_name}

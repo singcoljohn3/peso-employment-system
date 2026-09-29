@@ -183,9 +183,13 @@ export default function AdminResumes({
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 shrink-0">
-                                                        {(resume.job_seeker?.first_name?.[0] ?? '?')}
-                                                    </div>
+                                                    {resume.job_seeker?.photo_url ? (
+                                                        <img src={`/storage/${resume.job_seeker.photo_url}`} alt="Profile" className="h-8 w-8 rounded-full object-cover shrink-0 border border-slate-200" />
+                                                    ) : (
+                                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 shrink-0">
+                                                            {(resume.job_seeker?.first_name?.[0] ?? '?')}
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <p className="font-medium text-slate-900">
                                                             {resume.job_seeker?.first_name} {resume.job_seeker?.last_name}

@@ -1512,9 +1512,9 @@ class EstablishmentController extends Controller
             $resumeService = app(ResumeService::class);
             $data = $resumeService->buildResumeData($jobSeeker);
 
-            $template = $jobSeeker->resume?->template ?? $jobSeeker->preferred_template ?? 'modern-professional';
+            $template = $jobSeeker->resume?->template ?? $jobSeeker->preferred_template ?? ResumeService::DEFAULT_TEMPLATE;
 
-            $html = view('resumes.templates.' . $template, ['data' => $data])->render();
+            $html = view($resumeService->viewFor($template), ['data' => $data])->render();
 
             return response()->json([
                 'html' => $html,
