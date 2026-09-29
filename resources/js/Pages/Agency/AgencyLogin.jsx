@@ -106,10 +106,7 @@ export default function AgencyLogin({ status }) {
                         </form>
 
                         <div className="mt-6 flex flex-col items-center justify-center gap-3 text-sm sm:flex-row">
-                            <Link href={route('agency.register')} className="font-semibold text-blue-600 transition-colors hover:text-blue-700">
-                                Create an Account
-                            </Link>
-                            <span className="hidden text-slate-300 sm:inline">•</span>
+
                             <Link href={route('peso.login')} className="text-blue-600 transition-colors hover:text-blue-700">
                                 Back to main login
                             </Link>

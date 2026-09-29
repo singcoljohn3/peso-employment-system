@@ -379,11 +379,12 @@ Route::middleware(['auth', 'establishment'])->group(function () {
 // AGENCY PORTAL
 // ═══════════════════════════════════════════════════════════════
 Route::middleware('guest')->group(function () {
-    Route::get('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerCreate'])
-        ->name('agency.register');
-    Route::post('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerStore'])
-        ->middleware('throttle:10,1')
-        ->name('agency.register.store');
+    // Agency Account Creation moved to Admin -> User Management
+    // Route::get('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerCreate'])
+    //     ->name('agency.register');
+    // Route::post('/agency/register', [App\Http\Controllers\AgencyController::class, 'registerStore'])
+    //     ->middleware('throttle:10,1')
+    //     ->name('agency.register.store');
     Route::get('/agency/login', [App\Http\Controllers\AgencyController::class, 'loginCreate'])
         ->name('agency.login');
     Route::post('/agency/login', [App\Http\Controllers\AgencyController::class, 'loginStore'])

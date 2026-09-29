@@ -6,7 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
     Plus, X, Users, Shield, Mail, User, ChevronLeft, ChevronRight,
-    Building2, Eye, EyeOff, Search, Loader2, UserMinus
+    Building2, Eye, EyeOff, Search, Loader2, UserMinus, Briefcase
 } from 'lucide-react';
 
 export default function UserManagement() {
@@ -33,6 +33,9 @@ export default function UserManagement() {
         barangay_id: '',
         latitude: '',
         longitude: '',
+        agency_name: '',
+        license_number: '',
+        address: '',
     });
 
     const filteredBarangays = barangayList.filter((b) =>
@@ -99,6 +102,7 @@ export default function UserManagement() {
     }, [userList]);
 
     const isEstablishment = data.role === 'Establishment';
+    const isAgency = data.role === 'agency';
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -138,6 +142,7 @@ export default function UserManagement() {
         if (role === 'staff') return 'bg-purple-100 text-purple-700';
         if (role === 'job_seeker') return 'bg-amber-100 text-amber-700';
         if (role === 'Establishment') return 'bg-green-100 text-green-700';
+        if (role === 'agency') return 'bg-blue-100 text-blue-700';
         return 'bg-slate-100 text-slate-700';
     };
 
@@ -146,6 +151,7 @@ export default function UserManagement() {
         if (role === 'staff') return 'Staff';
         if (role === 'job_seeker') return 'Job Seeker';
         if (role === 'Establishment') return 'Establishment';
+        if (role === 'agency') return 'Agency';
         return role;
     };
 
@@ -316,9 +322,10 @@ export default function UserManagement() {
                                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                                     Role <span className="text-red-500">*</span>
                                 </label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-3">
                                     {[
                                         { value: 'admin', label: 'Administrator', icon: Shield },
+                                        { value: 'agency', label: 'Agency', icon: Briefcase },
                                         { value: 'Establishment', label: 'Establishment', icon: Building2 },
                                     ].map((opt) => {
                                         const Icon = opt.icon;
@@ -343,7 +350,7 @@ export default function UserManagement() {
                                 {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
                             </div>
 
-                            <div className={`grid grid-cols-1 ${isEstablishment ? 'md:grid-cols-2' : ''} gap-4`}>
+                            <div className={`grid grid-cols-1 ${isEstablishment || isAgency ? 'md:grid-cols-2' : ''} gap-4`}>
                                 {/* Account Information */}
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2">
@@ -352,14 +359,14 @@ export default function UserManagement() {
 
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">
-                                            {isEstablishment ? 'Account Name' : 'Full Name'} <span className="text-red-500">*</span>
+                                            {isEstablishment ? 'Account Name' : isAgency ? 'Account/User Name' : 'Full Name'} <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}
                                             className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.name ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
-                                            placeholder={isEstablishment ? 'e.g. Juan Dela Cruz' : 'Full name'}
+                                            placeholder={isEstablishment ? 'e.g. Juan Dela Cruz' : isAgency ? 'e.g. Agency Admin' : 'Full name'}
                                         />
                                         {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                                     </div>
@@ -387,7 +394,7 @@ export default function UserManagement() {
                                                     value={data.password}
                                                     onChange={(e) => setData('password', e.target.value)}
                                                     className={`w-full px-4 py-2.5 pr-10 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.password ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
-                                                    placeholder={isEstablishment ? 'Auto-generated if blank' : 'Leave blank for default'}
+                                                    placeholder={isEstablishment || isAgency ? 'Auto-generated if blank' : 'Leave blank for default'}
                                                 />
                                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -410,6 +417,85 @@ export default function UserManagement() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Agency-specific fields */}
+                                {isAgency && (
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2">
+                                            <Briefcase className="h-4 w-4 text-blue-600" /> Agency Information
+                                        </h4>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                                Agency Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={data.agency_name}
+                                                onChange={(e) => setData('agency_name', e.target.value)}
+                                                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.agency_name ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                                placeholder="Official agency name"
+                                            />
+                                            {errors.agency_name && <p className="text-red-500 text-xs mt-1">{errors.agency_name}</p>}
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                                Registration / Permit Number <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={data.license_number}
+                                                onChange={(e) => setData('license_number', e.target.value)}
+                                                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.license_number ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                                placeholder="Permit/License number"
+                                            />
+                                            {errors.license_number && <p className="text-red-500 text-xs mt-1">{errors.license_number}</p>}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                                Contact Person Name <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={data.contact_person}
+                                                onChange={(e) => setData('contact_person', e.target.value)}
+                                                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.contact_person ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                                placeholder="Contact person"
+                                            />
+                                            {errors.contact_person && <p className="text-red-500 text-xs mt-1">{errors.contact_person}</p>}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                                Contact Number <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={data.contact_number}
+                                                onChange={(e) => setData('contact_number', e.target.value)}
+                                                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.contact_number ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                                placeholder="09XX XXX XXXX"
+                                            />
+                                            {errors.contact_number && <p className="text-red-500 text-xs mt-1">{errors.contact_number}</p>}
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                                                Complete Business Address <span className="text-red-500">*</span>
+                                            </label>
+                                            <textarea
+                                                value={data.address}
+                                                onChange={(e) => setData('address', e.target.value)}
+                                                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${errors.address ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                                placeholder="Complete address"
+                                                rows="3"
+                                            ></textarea>
+                                            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Establishment-specific fields */}
                                 {isEstablishment && (

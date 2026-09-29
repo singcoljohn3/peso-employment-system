@@ -802,7 +802,7 @@ class AdminController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'role' => ['required', 'in:staff,Establishment,baranggay,admin'],
+            'role' => ['required', 'in:staff,Establishment,baranggay,admin,agency'],
             'password' => ['nullable', 'string', 'min:6'],
             'password_confirmation' => ['nullable', 'string', 'min:6', 'same:password'],
         ];
@@ -815,6 +815,16 @@ class AdminController extends Controller
                 'barangay_id' => ['required', 'exists:barangays,id'],
                 'latitude' => ['nullable', 'numeric', 'between:-90,90'],
                 'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            ]);
+        }
+        
+        if ($request->role === 'agency') {
+            $rules = array_merge($rules, [
+                'agency_name' => ['required', 'string', 'max:255'],
+                'license_number' => ['required', 'string', 'max:255'],
+                'contact_person' => ['required', 'string', 'max:255'],
+                'contact_number' => ['required', 'string', 'max:255'],
+                'address' => ['required', 'string'],
             ]);
         }
 
@@ -842,6 +852,19 @@ class AdminController extends Controller
                     'longitude' => $validated['longitude'] ?? null,
                 ]
             );
+        }
+        
+        if ($validated['role'] === 'agency') {
+            \App\Models\Agency::create([
+                'user_id' => $user->id,
+                'email' => $validated['email'],
+                'agency_name' => $validated['agency_name'],
+                'license_number' => $validated['license_number'],
+                'contact_person' => $validated['contact_person'],
+                'contact_number' => $validated['contact_number'],
+                'address' => $validated['address'],
+                'status' => 'approved',
+            ]);
         }
 
         return redirect()->route('admin.user-management')->with('success', 'User account created successfully.');
