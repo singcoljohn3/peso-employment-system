@@ -13,7 +13,7 @@ export default function StatusDonut({ slices, total, centerLabel = 'Total', empt
     const sum = total ?? data.reduce((acc, slice) => acc + Number(slice.value || 0), 0);
 
     return (
-        <div className="relative h-full w-full">
+        <div className="relative h-full w-full" style={{ minHeight: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                     <Tooltip

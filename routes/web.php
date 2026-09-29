@@ -289,16 +289,14 @@ Route::middleware(['auth'])->group(function () {
         $user = Auth::user();
         \Illuminate\Support\Facades\DB::table('notifications')
             ->where('id', $id)
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->update(['read_at' => now()]);
         return response()->json(['message' => 'Notification marked as read.']);
     });
     Route::post('/api/notifications/read-all', function () {
         $user = Auth::user();
         \Illuminate\Support\Facades\DB::table('notifications')
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('notifiable_id', $user->id)
+            ->where('user_id', $user->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
         return response()->json(['message' => 'All notifications marked as read.']);
