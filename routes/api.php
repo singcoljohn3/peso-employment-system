@@ -40,10 +40,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/applications', [ApplicationController::class, 'store']);
     Route::get('/applications/my', [ApplicationController::class, 'index']);
 
-    // Notifications API
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    // Notifications API (Commented out because it conflicts with web.php session routes)
+    // Route::get('/notifications', [NotificationController::class, 'index']);
+    // Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    // Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // Resume API
     Route::get('/resume/templates', [ResumeController::class, 'templates']);
