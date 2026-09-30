@@ -12,6 +12,8 @@ class ApplicationStatus extends Model
 
     protected $table = 'application_statuses';
 
+    const CREATED_AT = null;
+
     protected $fillable = [
         'application_id',
         'status_id',
