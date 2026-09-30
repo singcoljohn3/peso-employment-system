@@ -1394,7 +1394,8 @@ class EstablishmentController extends Controller
     {
         $establishment = $this->resolveEstablishmentForCurrentUser();
         
-        if (!$establishment || $application->job->establishment_id !== $establishment->id) {
+        $jobEstablishmentId = $application->job?->establishment_id;
+        if (!$establishment || ($jobEstablishmentId !== $establishment->id && $application->establishment_id !== $establishment->id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1407,7 +1408,6 @@ class EstablishmentController extends Controller
         $hiringStatus = HiringStatus::where('status_name', $validated['status'])->first();
         
         if (!$hiringStatus) {
-            // Create the hiring status if it doesn't exist
             $hiringStatus = HiringStatus::create([
                 'status_name' => $validated['status'],
             ]);
@@ -1424,6 +1424,20 @@ class EstablishmentController extends Controller
             'status' => $validated['status'],
             'remarks' => $validated['remarks'] ?? $application->remarks,
         ]);
+
+        // Update member's employment status when hired or rejected
+        if ($application->jobSeeker) {
+            $newEmploymentStatus = match (strtolower($validated['status'])) {
+                'hired' => 'employed',
+                'rejected' => 'unemployed',
+                default => null,
+            };
+            if ($newEmploymentStatus) {
+                $application->jobSeeker->update([
+                    'employment_status' => $newEmploymentStatus,
+                ]);
+            }
+        }
 
         // Send notification to job seeker
         try {
@@ -1442,7 +1456,8 @@ class EstablishmentController extends Controller
     {
         $establishment = $this->resolveEstablishmentForCurrentUser();
 
-        if (!$establishment || $application->job->establishment_id !== $establishment->id) {
+        $jobEstablishmentId = $application->job?->establishment_id;
+        if (!$establishment || ($jobEstablishmentId !== $establishment->id && $application->establishment_id !== $establishment->id)) {
             abort(403, 'Unauthorized action.');
         }
 
