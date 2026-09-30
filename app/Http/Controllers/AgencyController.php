@@ -714,12 +714,7 @@ class AgencyController extends Controller
         }
 
         $applications = Application::with(['jobSeeker.user', 'jobSeeker.barangay', 'jobSeeker.resume', 'job', 'job.agency', 'job.establishment', 'applicationStatus.hiringStatus', 'interview'])
-            ->where(function ($query) use ($agency) {
-                $query->where('agency_id', $agency->id)
-                      ->orWhereHas('job', function ($q) use ($agency) {
-                          $q->where('agency_id', $agency->id);
-                      });
-            })
+            ->where('agency_id', $agency->id)
             ->orderBy('created_at', 'desc')
             ->paginate(12)
             ->through(function ($app) {
@@ -742,12 +737,7 @@ class AgencyController extends Controller
             return $app;
         });
 
-        $baseQuery = Application::where(function ($query) use ($agency) {
-            $query->where('agency_id', $agency->id)
-                  ->orWhereHas('job', function ($q) use ($agency) {
-                      $q->where('agency_id', $agency->id);
-                  });
-        });
+        $baseQuery = Application::where('agency_id', $agency->id);
 
         $statistics = [
             'total' => (clone $baseQuery)->count(),
