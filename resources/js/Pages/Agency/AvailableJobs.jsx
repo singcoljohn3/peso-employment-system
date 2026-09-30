@@ -379,19 +379,7 @@ export default function AvailableJobs() {
         <AgencyLayouts>
             <Head title="Job Vacancies" />
 
-            <div className="py-8">
-                <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-                    {/* Company Info Header */}
-                    
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-slate-900">{establishment.company_name}</h3>
-                                    <p className="text-sm text-slate-600">
-                                        {establishment.contact_person} | {establishment.email} | {establishment.contact_number || 'No contact number'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
 
                     {showForm ? (
                         <>
@@ -562,8 +550,6 @@ export default function AvailableJobs() {
                             )}
                         </>
                     )}
-                </div>
-            </div>
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && selectedJob && (
