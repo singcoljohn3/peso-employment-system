@@ -343,8 +343,11 @@ class AgencyController extends Controller
             return redirect()->route('agency.profile')->with('error', 'Please complete your agency profile first.');
         }
 
-        $jobs = Job::where('agency_id', $agency->id)
-            ->with(['skills', 'applications.jobSeeker', 'barangay'])
+        $jobs = Job::where(function ($query) use ($agency) {
+                $query->where('agency_id', $agency->id)
+                      ->orWhereNotNull('establishment_id');
+            })
+            ->with(['skills', 'applications.jobSeeker', 'barangay', 'establishment', 'agency'])
             ->withCount('applications')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
