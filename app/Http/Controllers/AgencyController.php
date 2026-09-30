@@ -582,11 +582,7 @@ class AgencyController extends Controller
                 : back()->with('error', 'Please complete your agency profile first.');
         }
 
-        if ($job->agency_id !== $agency->id) {
-            return $request->expectsJson()
-                ? response()->json(['message' => 'Unauthorized action.'], 403)
-                : abort(403, 'Unauthorized action.');
-        }
+        // Allow agencies to apply to both their own jobs and establishment jobs
 
         $isActiveVacancy = in_array($job->hiring_status, ['Open', 'Hiring']);
         if ($job->application_deadline && now()->startOfDay()->gt(\Carbon\Carbon::parse($job->application_deadline)->startOfDay())) {
