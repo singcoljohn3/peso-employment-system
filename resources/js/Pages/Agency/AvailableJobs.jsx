@@ -1,26 +1,27 @@
-import { Head, useForm, router, Link } from '@inertiajs/react';
 import AgencyLayouts from '@/Layouts/AgencyLayouts';
-import { useState, useRef, useEffect } from 'react';
-import {
-    Plus, Search, Briefcase, X, Send, CheckCircle2,
-    MapPin, DollarSign, Tag, GraduationCap, Users, Edit, Trash2,
-    AlertCircle, CheckCircle, Save, Loader2, ArrowLeft, ChevronDown
-} from 'lucide-react';
 import JobApplicationWizard from '@/Components/Agency/JobApplicationWizard';
-import Pagination from '@/Components/Agency/Pagination';
+import { Head, usePage, useForm, Link } from '@inertiajs/react';
+import { useState, useEffect, useRef } from 'react';
+import {
+    Briefcase, Plus, Search, Edit, Trash2, Users, X, MapPin, DollarSign, Tag, AlertCircle,
+    Clock, GraduationCap, Phone, Mail, User, CheckCircle,
+    Building2, Hash, Calendar, Eye, Sparkles,
+    Shield, Heart, Save, Loader2, ArrowLeft, Layers, Globe, ChevronDown
+} from 'lucide-react';
 
-export default function JobVacancies({ jobs, agency, skills, barangays = [], members = [], appliedJobIds, flash }) {
-    const [showCreate, setShowCreate] = useState(false);
+export default function AvailableJobs() {
+    const { jobs, agency, skills, barangays = [], members = [], appliedJobIds, flash } = usePage().props;
     const [showWizard, setShowWizard] = useState(false);
-    const [selectedJob, setSelectedJob] = useState(null);
     const [appliedIds, setAppliedIds] = useState(appliedJobIds ?? []);
+    const openApply = (job) => { setSelectedJob(job); setShowWizard(true); };
+    const handleApplied = (jobId) => { setAppliedIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId])); };
+    const isJobActive = (job) => { if (!['Open', 'Hiring'].includes(job.hiring_status)) return false; if (job.application_deadline) { const today = new Date(); today.setHours(0, 0, 0, 0); if (new Date(job.application_deadline) < today) return false; } return true; };
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    
-    // Modal states
+    const [showForm, setShowForm] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showApplicantsModal, setShowApplicantsModal] = useState(false);
+    const [selectedJob, setSelectedJob] = useState(null);
 
     const educationalBackgrounds = [
         'Any Educational Background',
@@ -77,11 +78,9 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
         max_salary: '',
         salary_negotiable: false,
         benefits: '',
-        barangay_id: '',
-        description: '',
     });
 
-    const { delete: destroy, processing: deleteProcessing } = useForm();
+    const { delete: destroy, deleteProcessing } = useForm();
 
     useEffect(() => {
         if (selectedJob && isEditing) {
@@ -98,23 +97,15 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                 max_salary: selectedJob.max_salary ?? '',
                 salary_negotiable: selectedJob.salary_negotiable ?? false,
                 benefits: selectedJob.benefits || '',
-                barangay_id: selectedJob.barangay_id || '',
-                description: selectedJob.description || '',
             });
-            setShowCreate(true);
+            setShowForm(true);
         }
     }, [selectedJob, isEditing]);
-
-    const filteredJobs = jobs?.data?.filter((job) => {
-        const matchesSearch = !searchTerm || job.job_title?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = !statusFilter || job.hiring_status === statusFilter;
-        return matchesSearch && matchesStatus;
-    }) ?? [];
 
     const handleAddClick = () => {
         reset();
         setIsEditing(false);
-        setShowCreate(true);
+        setShowForm(true);
     };
 
     const handleEditClick = (job) => {
@@ -123,7 +114,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
     };
 
     const handleCancelForm = () => {
-        setShowCreate(false);
+        setShowForm(false);
         setIsEditing(false);
         setSelectedJob(null);
         reset();
@@ -141,16 +132,21 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
 
     const submitAdd = (e) => {
         e.preventDefault();
-        post(route('agency.jobs.store'), {
-            onSuccess: () => { setShowCreate(false); reset(); },
+        post(route('establishment.jobs.store'), {
+            forceFormData: true,
+            onSuccess: () => {
+                setShowForm(false);
+                reset();
+            },
         });
     };
 
     const submitEdit = (e) => {
         e.preventDefault();
-        put(route('agency.jobs.update', selectedJob.id), {
+        put(route('establishment.jobs.update', selectedJob.id), {
+            forceFormData: true,
             onSuccess: () => {
-                setShowCreate(false);
+                setShowForm(false);
                 setIsEditing(false);
                 setSelectedJob(null);
                 reset();
@@ -159,7 +155,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
     };
 
     const submitDelete = () => {
-        destroy(route('agency.jobs.delete', selectedJob.id), {
+        destroy(route('establishment.jobs.delete', selectedJob.id), {
             onSuccess: () => {
                 setShowDeleteModal(false);
                 setSelectedJob(null);
@@ -167,32 +163,21 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
         });
     };
 
-    const openApply = (job) => {
-        setSelectedJob(job);
-        setShowWizard(true);
-    };
-
-    const handleApplied = (jobId) => {
-        setAppliedIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
-    };
-
-    const isJobActive = (job) => {
-        if (!['Open', 'Hiring'].includes(job.hiring_status)) return false;
-        if (job.application_deadline) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (new Date(job.application_deadline) < today) return false;
-        }
-        return true;
-    };
+    const filteredJobs = jobs?.data?.filter(job => {
+        const matchesSearch = !searchTerm ||
+            job.job_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            job.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            job.employment_type?.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesSearch;
+    }) || [];
 
     const employmentTypes = [
-        { value: 'Full-time', label: 'Full-Time' },
-        { value: 'Part-time', label: 'Part-Time' },
-        { value: 'Contract', label: 'Contract' },
-        { value: 'Temporary', label: 'Temporary' },
-        { value: 'Internship', label: 'Internship' },
-        { value: 'Freelance', label: 'Freelance' },
+        { value: 'full_time', label: 'Full-Time' },
+        { value: 'part_time', label: 'Part-Time' },
+        { value: 'contract', label: 'Contract' },
+        { value: 'temporary', label: 'Temporary' },
+        { value: 'internship', label: 'Internship' },
+        { value: 'freelance', label: 'Freelance' },
     ];
 
     const workArrangements = ['On-site', 'Hybrid', 'Remote'];
@@ -219,7 +204,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                             </label>
                             <input type="text" value={data.job_title} onChange={e => setData('job_title', e.target.value)}
                                 className={`block w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.job_title ? 'border-red-400' : 'border-slate-300'}`}
-                                placeholder="e.g., Cashier" />
+                                placeholder="e.g., Software Engineer" />
                             {errors.job_title && <p className="mt-1 text-xs text-red-600">{errors.job_title}</p>}
                         </div>
                         <div className="relative" ref={eduDropdownRef}>
@@ -277,14 +262,6 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                             {errors.employment_type && <p className="mt-1 text-xs text-red-600">{errors.employment_type}</p>}
                         </div>
                         <div>
-                            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Barangay</label>
-                            <select value={data.barangay_id} onChange={(e) => setData('barangay_id', e.target.value)}
-                                className="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select barangay</option>
-                                {barangays?.map((b) => <option key={b.id} value={b.id}>{b.barangay_name}</option>)}
-                            </select>
-                        </div>
-                        <div>
                             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Work Arrangement</label>
                             <div className="flex gap-2">
                                 {workArrangements.map(wa => (
@@ -322,13 +299,6 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                                 <option value="Filled">Filled</option>
                             </select>
                         </div>
-                        <div className="md:col-span-2">
-                            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
-                            <textarea value={data.description} onChange={e => setData('description', e.target.value)}
-                                rows={3}
-                                className="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                                placeholder="Job description..." />
-                        </div>
                     </div>
                 </div>
 
@@ -364,13 +334,13 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Minimum Salary (₱)</label>
                             <input type="number" min="0" step="0.01" value={data.min_salary} onChange={e => setData('min_salary', e.target.value)}
                                 className="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="e.g., 10000" />
+                                placeholder="e.g., 20000" />
                         </div>
                         <div>
                             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Maximum Salary (₱)</label>
                             <input type="number" min="0" step="0.01" value={data.max_salary} onChange={e => setData('max_salary', e.target.value)}
                                 className="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="e.g., 20000" />
+                                placeholder="e.g., 50000" />
                         </div>
                         <div className="md:col-span-2">
                             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Benefits (Optional)</label>
@@ -398,7 +368,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                     {processing ? (
                         <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
                     ) : (
-                        <><Save className="h-4 w-4" /> {editing ? 'Update Job Vacancy' : 'Post Job Vacancy'}</>
+                        <><Save className="h-4 w-4" /> {editing ? 'Update Job Vacancy' : 'Save Job Vacancy'}</>
                     )}
                 </button>
             </div>
@@ -406,192 +376,193 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
     );
 
     return (
-        <AgencyLayouts header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Job Vacancies</h2>}>
+        <AgencyLayouts>
             <Head title="Job Vacancies" />
 
-            <div className="space-y-6">
-                {showCreate ? (
-                    <>
-                        <div className="mb-6 flex items-center gap-3">
-                            <button type="button" onClick={handleCancelForm}
-                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
-                                <ArrowLeft className="h-4 w-4" />
-                            </button>
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-900">
-                                    {isEditing ? 'Edit Job Vacancy' : 'Add New Job Vacancy'}
-                                </h3>
-                                <p className="text-sm text-slate-500">Fill in all required fields to {isEditing ? 'update' : 'create'} a job posting</p>
-                            </div>
-                        </div>
-
-                        <form onSubmit={isEditing ? submitEdit : submitAdd} className="space-y-6">
-                            {formFields()}
-                            {formFooter(isEditing)}
-                        </form>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900">Job Vacancies</h1>
-                                <p className="text-slate-500 text-sm mt-1">Manage your job postings</p>
-                            </div>
-                            <button onClick={handleAddClick} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all shadow-sm">
-                                <Plus className="h-4 w-4" /> Post Job Vacancy
-                            </button>
-                        </div>
-
-                        {/* Flash Messages */}
-                        {flash?.success && (
-                            <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-800">
-                                <CheckCircle className="h-5 w-5 shrink-0" />
-                                <p className="text-sm font-medium">{flash.success}</p>
-                            </div>
-                        )}
-                        {flash?.error && (
-                            <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-800">
-                                <AlertCircle className="h-5 w-5 shrink-0" />
-                                <p className="text-sm font-medium">{flash.error}</p>
-                            </div>
-                        )}
-
-                        {/* Filters */}
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search jobs..." className="w-full px-4 py-2.5 pl-10 bg-white border border-slate-300 rounded-lg text-slate-700 text-sm placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
-                            </div>
-                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-                                <option value="">All Status</option>
-                                <option value="Open">Open</option>
-                                <option value="Hiring">Hiring</option>
-                                <option value="Closed">Closed</option>
-                                <option value="Filled">Filled</option>
-                            </select>
-                        </div>
-
-                        {/* Jobs List */}
-                        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-                            {filteredJobs.length === 0 ? (
-                                <div className="p-12 text-center">
-                                    <Briefcase className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-slate-900 mb-2">No Jobs Found</h3>
-                                    <p className="text-slate-500 max-w-md mx-auto">
-                                        {jobs?.data?.length > 0
-                                            ? 'No jobs match your current filters.'
-                                            : 'Start by adding your first job posting.'}
+            <div className="py-8">
+                <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+                    {/* Company Info Header */}
+                    
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-slate-900">{establishment.company_name}</h3>
+                                    <p className="text-sm text-slate-600">
+                                        {establishment.contact_person} | {establishment.email} | {establishment.contact_number || 'No contact number'}
                                     </p>
                                 </div>
-                            ) : (
-                                <div className="divide-y divide-slate-200">
-                                    {filteredJobs.map((job) => (
-                                        <div key={job.id} className="p-6 hover:bg-slate-50 transition-colors">
-                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                                <div className="flex-1">
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                                                            <Briefcase className="h-6 w-6 text-blue-600" />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <h4 className="text-lg font-semibold text-slate-900">{job.job_title}</h4>
-                                                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                                                    job.hiring_status === 'Open' || job.hiring_status === 'Hiring'
-                                                                        ? 'bg-green-100 text-green-800'
-                                                                        : 'bg-slate-100 text-slate-600'
-                                                                }`}>{job.hiring_status || 'Open'}</span>
-                                                            </div>
-                                                            <p className="mt-1 text-sm text-slate-600 line-clamp-2">{job.description}</p>
-                                                            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                                                                <span className="flex items-center gap-1">
-                                                                    <Tag className="h-4 w-4" />
-                                                                    {job.employment_type?.replace('_', ' ')}
-                                                                </span>
-                                                                {job.educational_background && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <GraduationCap className="h-4 w-4" />
-                                                                        {job.educational_background}
-                                                                    </span>
-                                                                )}
-                                                                {(job.min_salary || job.max_salary || job.salary_range) && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <DollarSign className="h-4 w-4" />
-                                                                        {job.salary_range ? `₱${job.salary_range}` : `₱${Number(job.min_salary || 0).toLocaleString()} - ₱${Number(job.max_salary || 0).toLocaleString()}`}
-                                                                    </span>
-                                                                )}
-                                                                <span className="flex items-center gap-1">
-                                                                    <MapPin className="h-4 w-4" />
-                                                                    {job.barangay?.barangay_name || 'N/A'}
-                                                                </span>
-                                                                {job.vacant_positions && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <Users className="h-4 w-4" />
-                                                                        {job.vacant_positions} slot{job.vacant_positions > 1 ? 's' : ''}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 lg:flex-col lg:items-end">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <button onClick={() => handleViewApplicants(job)} className="flex items-center gap-1 rounded-xl bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 transition-colors">
-                                                            <Users className="h-4 w-4" />
-                                                            <span className="hidden sm:inline">Applicants</span>
-                                                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
-                                                                {job.applications_count || 0}
-                                                            </span>
-                                                        </button>
-                                                        
-                                                        {appliedIds.includes(job.id) ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors">
-                                                                <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Applied
-                                                            </span>
-                                                        ) : isJobActive(job) ? (
-                                                            <button onClick={() => openApply(job)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-sm">
-                                                                <Send className="h-4 w-4" /> Apply
-                                                            </button>
-                                                        ) : (
-                                                            <span className="inline-flex items-center px-3 py-2 rounded-xl text-sm font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                                                                Not Available
-                                                            </span>
-                                                        )}
+                            </div>
+                        </div>
+                    )}
 
-                                                        <button onClick={() => handleEditClick(job)} className="flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600 hover:bg-amber-100 transition-colors">
-                                                            <Edit className="h-4 w-4" />
-                                                            <span className="hidden sm:inline">Edit</span>
-                                                        </button>
-                                                        <button onClick={() => handleDeleteClick(job)} className="flex items-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-colors">
-                                                            <Trash2 className="h-4 w-4" />
-                                                            <span className="hidden sm:inline">Delete</span>
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-xs text-slate-400">
-                                                        Posted {new Date(job.created_at).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                    {showForm ? (
+                        <>
+                            <div className="mb-6 flex items-center gap-3">
+                                <button type="button" onClick={handleCancelForm}
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
+                                    <ArrowLeft className="h-4 w-4" />
+                                </button>
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-900">
+                                        {isEditing ? 'Edit Job Vacancy' : 'Add New Job Vacancy'}
+                                    </h3>
+                                    <p className="text-sm text-slate-500">Fill in all required fields to {isEditing ? 'update' : 'create'} a job posting</p>
+                                </div>
+                            </div>
+
+                            <form onSubmit={isEditing ? submitEdit : submitAdd} className="space-y-6">
+                                {formFields()}
+                                {formFooter(isEditing)}
+                            </form>
+                        </>
+                    ) : (
+                        <>
+                            {/* Header Actions */}
+                            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-slate-900">Job Listings</h3>
+                                    <p className="mt-1 text-sm text-slate-600">Create and manage job postings</p>
+                                </div>
+                                <button onClick={handleAddClick}
+                                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
+                                    <Plus className="h-4 w-4" />
+                                    Add Job
+                                </button>
+                            </div>
+
+                            {/* Flash Messages */}
+                            {flash?.success && (
+                                <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-800">
+                                    <CheckCircle className="h-5 w-5 shrink-0" />
+                                    <p className="text-sm font-medium">{flash.success}</p>
                                 </div>
                             )}
-                        </div>
+                            {flash?.error && (
+                                <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-800">
+                                    <AlertCircle className="h-5 w-5 shrink-0" />
+                                    <p className="text-sm font-medium">{flash.error}</p>
+                                </div>
+                            )}
 
-                        {/* Pagination */}
-                        <Pagination
-                            links={jobs?.links ?? []}
-                            prevLink={jobs?.links?.[0]}
-                            nextLink={jobs?.links?.[jobs?.links?.length - 1]}
-                            lastPage={jobs?.last_page}
-                            from={jobs?.from}
-                            to={jobs?.to}
-                            total={jobs?.total}
-                            label="jobs"
-                            onPageChange={(link) => { if (link?.url) router.get(link.url); }}
-                        />
-                    </>
-                )}
+                            {/* Search */}
+                            <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                    <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Search jobs by title, description..." />
+                                </div>
+                            </div>
+
+                            {/* Jobs List */}
+                            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                {filteredJobs.length > 0 ? (
+                                    <div className="divide-y divide-slate-200">
+                                        {filteredJobs.map((job) => (
+                                            <div key={job.id} className="p-6 hover:bg-slate-50 transition-colors">
+                                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
+                                                                <Briefcase className="h-6 w-6 text-blue-600" />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <h4 className="text-lg font-semibold text-slate-900">{job.job_title}</h4>
+                                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                                                        job.hiring_status === 'Open' || job.hiring_status === 'Hiring'
+                                                                            ? 'bg-green-100 text-green-800'
+                                                                            : 'bg-slate-100 text-slate-600'
+                                                                    }`}>{job.hiring_status || 'Open'}</span>
+                                                                </div>
+                                                                <p className="mt-1 text-sm text-slate-600 line-clamp-2">{job.description}</p>
+                                                                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Tag className="h-4 w-4" />
+                                                                        {job.employment_type?.replace('_', ' ')}
+                                                                    </span>
+                                                                    {job.educational_background && (
+                                                                        <span className="flex items-center gap-1">
+                                                                            <GraduationCap className="h-4 w-4" />
+                                                                            {job.educational_background}
+                                                                        </span>
+                                                                    )}
+                                                                    {job.min_salary && job.max_salary && (
+                                                                        <span className="flex items-center gap-1">
+                                                                            <DollarSign className="h-4 w-4" />
+                                                                            ₱{Number(job.min_salary).toLocaleString()} - ₱{Number(job.max_salary).toLocaleString()}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="flex items-center gap-1">
+                                                                        <MapPin className="h-4 w-4" />
+                                                                        {job.barangay?.barangay_name || 'N/A'}
+                                                                    </span>
+                                                                    {job.vacant_positions && (
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Users className="h-4 w-4" />
+                                                                            {job.vacant_positions} slot{job.vacant_positions > 1 ? 's' : ''}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 lg:flex-col lg:items-end">
+                                                        <div className="flex items-center gap-2">
+                                                            
+                                                            
+                                                            
+                                                        </div>
+                                                        <p className="text-xs text-slate-400">
+                                                            Posted {new Date(job.created_at).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-12 text-center">
+                                        <Briefcase className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                                        <h3 className="text-lg font-medium text-slate-900 mb-2">No Jobs Found</h3>
+                                        <p className="text-slate-500 max-w-md mx-auto">
+                                            {jobs?.data?.length > 0
+                                                ? 'No jobs match your current filters.'
+                                                : 'Start by adding your first job posting.'}
+                                        </p>
+                                        {jobs?.data?.length === 0 && (
+                                            <button onClick={handleAddClick}
+                                                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
+                                                <Plus className="h-4 w-4" />
+                                                Add Job
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Pagination */}
+                            {jobs?.links && jobs.data.length > 0 && (
+                                <div className="mt-6 flex items-center justify-between">
+                                    <div className="text-sm text-slate-600">
+                                        Showing {jobs.from || 0} to {jobs.to || 0} of {jobs.total} results
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {jobs.links?.map((link, index) => (
+                                            <Link key={index} href={link.url || '#'}
+                                                className={`rounded-xl px-3 py-2 text-sm ${
+                                                    link.active
+                                                        ? 'bg-blue-600 text-white'
+                                                        : link.url
+                                                            ? 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                }`}
+                                                dangerouslySetInnerHTML={{ __html: link.label }} />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Delete Confirmation Modal */}
@@ -662,7 +633,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <Link href={route('agency.applicants')}
+                                                <Link href={route('establishment.applicants')}
                                                     className="text-sm font-medium text-blue-600 hover:text-blue-700">
                                                     View Details
                                                 </Link>
@@ -681,9 +652,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                     </div>
                 </div>
             )}
-
-            {/* Job Application Wizard */}
-            {showWizard && selectedJob && (
+                    {showWizard && selectedJob && (
                 <JobApplicationWizard
                     job={selectedJob}
                     members={members}
@@ -691,6 +660,7 @@ export default function JobVacancies({ jobs, agency, skills, barangays = [], mem
                     onSuccess={handleApplied}
                 />
             )}
-        </AgencyLayouts>
+</AgencyLayouts>
     );
 }
+
