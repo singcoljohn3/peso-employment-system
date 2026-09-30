@@ -1400,7 +1400,7 @@ class EstablishmentController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => ['required', 'string'],
+            'status' => ['required', 'string', 'in:pending,reviewed,shortlisted,interview_scheduled,approved,hired,rejected'],
             'remarks' => ['nullable', 'string'],
         ]);
 
@@ -1428,8 +1428,8 @@ class EstablishmentController extends Controller
         // Update member's employment status when hired or rejected
         if ($application->jobSeeker) {
             $newEmploymentStatus = match (strtolower($validated['status'])) {
-                'hired' => 'employed',
-                'rejected' => 'unemployed',
+                'hired' => 'Employed',
+                'rejected' => 'Unemployed',
                 default => null,
             };
             if ($newEmploymentStatus) {
@@ -1442,7 +1442,7 @@ class EstablishmentController extends Controller
         // Send notification to job seeker
         try {
             NotificationService::sendApplicationStatusUpdated($application);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Non-critical
         }
 

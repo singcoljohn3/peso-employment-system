@@ -1776,8 +1776,8 @@ class AgencyController extends Controller
         // Update member's employment status when hired or rejected
         if ($application->jobSeeker) {
             $newEmploymentStatus = match (strtolower($validated['status'])) {
-                'hired' => 'employed',
-                'rejected' => 'unemployed',
+                'hired' => 'Employed',
+                'rejected' => 'Unemployed',
                 default => null,
             };
             if ($newEmploymentStatus) {
@@ -1789,7 +1789,7 @@ class AgencyController extends Controller
 
         try {
             NotificationService::sendApplicationStatusUpdated($application);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Non-critical
         }
 
