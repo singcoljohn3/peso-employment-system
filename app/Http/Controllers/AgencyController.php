@@ -1747,7 +1747,8 @@ class AgencyController extends Controller
     {
         $agency = $this->resolveAgencyForCurrentUser();
 
-        if (!$agency || ($application->job->agency_id !== $agency->id && $application->agency_id !== $agency->id)) {
+        $jobAgencyId = $application->job?->agency_id;
+        if (!$agency || ($jobAgencyId !== $agency->id && $application->agency_id !== $agency->id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1771,6 +1772,20 @@ class AgencyController extends Controller
             'status' => $validated['status'],
             'remarks' => $validated['remarks'] ?? $application->remarks,
         ]);
+
+        // Update member's employment status when hired or rejected
+        if ($application->jobSeeker) {
+            $newEmploymentStatus = match (strtolower($validated['status'])) {
+                'hired' => 'employed',
+                'rejected' => 'unemployed',
+                default => null,
+            };
+            if ($newEmploymentStatus) {
+                $application->jobSeeker->update([
+                    'employment_status' => $newEmploymentStatus,
+                ]);
+            }
+        }
 
         try {
             NotificationService::sendApplicationStatusUpdated($application);
