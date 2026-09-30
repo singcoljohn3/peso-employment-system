@@ -260,7 +260,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/notifications', function () {
         $user = Auth::user();
         $rows = \Illuminate\Support\Facades\DB::table('notifications')
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', \App\Models\User::class)->where('notifiable_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get()
@@ -277,7 +277,7 @@ Route::middleware(['auth'])->group(function () {
                 ];
             });
         $unreadCount = \Illuminate\Support\Facades\DB::table('notifications')
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', \App\Models\User::class)->where('notifiable_id', $user->id)
             ->whereNull('read_at')
             ->count();
         return response()->json([
@@ -289,14 +289,14 @@ Route::middleware(['auth'])->group(function () {
         $user = Auth::user();
         \Illuminate\Support\Facades\DB::table('notifications')
             ->where('id', $id)
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', \App\Models\User::class)->where('notifiable_id', $user->id)
             ->update(['read_at' => now()]);
         return response()->json(['message' => 'Notification marked as read.']);
     });
     Route::post('/api/notifications/read-all', function () {
         $user = Auth::user();
         \Illuminate\Support\Facades\DB::table('notifications')
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', \App\Models\User::class)->where('notifiable_id', $user->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
         return response()->json(['message' => 'All notifications marked as read.']);
