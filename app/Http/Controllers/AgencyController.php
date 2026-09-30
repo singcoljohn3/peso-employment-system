@@ -1747,7 +1747,7 @@ class AgencyController extends Controller
     {
         $agency = $this->resolveAgencyForCurrentUser();
 
-        if (!$agency || $application->job->agency_id !== $agency->id) {
+        if (!$agency || ($application->job->agency_id !== $agency->id && $application->agency_id !== $agency->id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1785,7 +1785,7 @@ class AgencyController extends Controller
     {
         $agency = $this->resolveAgencyForCurrentUser();
 
-        if (!$agency || $application->job->agency_id !== $agency->id) {
+        if (!$agency || ($application->job->agency_id !== $agency->id && $application->agency_id !== $agency->id)) {
             abort(403, 'Unauthorized action.');
         }
 
