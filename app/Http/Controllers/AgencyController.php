@@ -713,9 +713,12 @@ class AgencyController extends Controller
             return redirect()->route('agency.profile')->with('error', 'Please complete your agency profile first.');
         }
 
-        $applications = Application::with(['jobSeeker.user', 'jobSeeker.barangay', 'jobSeeker.resume', 'job', 'job.agency', 'applicationStatus.hiringStatus', 'interview'])
-            ->whereHas('job', function ($query) use ($agency) {
-                $query->where('agency_id', $agency->id);
+        $applications = Application::with(['jobSeeker.user', 'jobSeeker.barangay', 'jobSeeker.resume', 'job', 'job.agency', 'job.establishment', 'applicationStatus.hiringStatus', 'interview'])
+            ->where(function ($query) use ($agency) {
+                $query->where('agency_id', $agency->id)
+                      ->orWhereHas('job', function ($q) use ($agency) {
+                          $q->where('agency_id', $agency->id);
+                      });
             })
             ->orderBy('created_at', 'desc')
             ->paginate(12)
@@ -739,8 +742,11 @@ class AgencyController extends Controller
             return $app;
         });
 
-        $baseQuery = Application::whereHas('job', function ($query) use ($agency) {
-            $query->where('agency_id', $agency->id);
+        $baseQuery = Application::where(function ($query) use ($agency) {
+            $query->where('agency_id', $agency->id)
+                  ->orWhereHas('job', function ($q) use ($agency) {
+                      $q->where('agency_id', $agency->id);
+                  });
         });
 
         $statistics = [
