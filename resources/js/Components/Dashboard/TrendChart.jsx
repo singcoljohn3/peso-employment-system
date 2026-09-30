@@ -23,7 +23,7 @@ export default function TrendChart({ points, series, variant = 'area', emptyMess
 
     return (
         <div style={{ width: '100%', height: '100%', minHeight: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height="100%">
                 <AreaChart data={rows} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                     <defs>
                         {series.map((item) => (

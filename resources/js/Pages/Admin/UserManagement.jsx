@@ -9,6 +9,13 @@ import {
     Building2, Eye, EyeOff, Search, Loader2, UserMinus, Briefcase
 } from 'lucide-react';
 
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
 export default function UserManagement() {
     const { users, barangays } = usePage().props;
     const [isModalOpen, setIsModalOpen] = useState(false);

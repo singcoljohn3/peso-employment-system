@@ -14,7 +14,7 @@ export default function StatusDonut({ slices, total, centerLabel = 'Total', empt
 
     return (
         <div className="relative h-full w-full" style={{ minHeight: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height="100%">
                 <PieChart>
                     <Tooltip
                         content={({ active, payload }) =>

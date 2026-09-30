@@ -569,7 +569,7 @@ export default function Reports() {
                                 )}
 
                                 {/* Bar Chart */}
-                                <ResponsiveContainer width="100%" height={380}>
+                                <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height={380}>
                                     <BarChart data={barangayChartData} margin={{ top: 10, right: 30, left: 0, bottom: 80 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                                         <XAxis

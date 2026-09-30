@@ -18,7 +18,7 @@ export default function MetricBars({ bars, valueKey = 'value', labelKey = 'label
     const categoryAxis = { dataKey: 'display', type: 'category', ...AXIS };
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height="100%">
             <BarChart
                 data={data}
                 layout={isHorizontal ? 'vertical' : 'horizontal'}

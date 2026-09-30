@@ -11,7 +11,7 @@ export default function RankedBars({ items, valueKey = 'applications', labelKey 
     if (!data.length) return <ChartEmpty description={emptyMessage} />;
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height="100%">
             <BarChart data={data} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 4 }} barCategoryGap="22%">
                 <CartesianGrid {...GRID} vertical horizontal={false} />
                 <XAxis type="number" {...AXIS} allowDecimals={false} />

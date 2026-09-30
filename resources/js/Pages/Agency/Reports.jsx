@@ -120,7 +120,7 @@ export default function Reports({ agency, statistics, monthlyApplications, appli
                     <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-lg shadow-gray-200/50">
                         <h2 className="text-base font-bold text-gray-900 mb-4">Applications by Status</h2>
                         <div className="relative h-56">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={statusChartData.length > 0 ? statusChartData : [{ name: 'No Data', value: 1 }]}

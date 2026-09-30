@@ -243,7 +243,7 @@ export default function Reports() {
                                 <TrendingUp className="h-4 w-4 text-blue-600" /> Monthly Applications Trend
                             </h4>
                             {hasApplications ? (
-                                <ResponsiveContainer width="100%" height={250}>
+                                <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height={250}>
                                     <LineChart data={lineChartData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                         <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
@@ -261,7 +261,7 @@ export default function Reports() {
                                 <PieChartIcon className="h-4 w-4 text-purple-600" /> Applications by Status
                             </h4>
                             {statusData.some(d => d.value > 0) ? (
-                                <ResponsiveContainer width="100%" height={250}>
+                                <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height={250}>
                                     <PieChart>
                                         <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value"
                                             label={({ name, value }) => `${name}: ${value}`}>
@@ -279,7 +279,7 @@ export default function Reports() {
                                 <BarChart3 className="h-4 w-4 text-emerald-600" /> Applications Per Job
                             </h4>
                             {barData.some(d => d.applicants > 0) ? (
-                                <ResponsiveContainer width="100%" height={250}>
+                                <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height={250}>
                                     <BarChart data={barData} layout="vertical">
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                         <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
@@ -300,7 +300,7 @@ export default function Reports() {
                                 <TrendingUp className="h-4 w-4 text-emerald-600" /> Monthly Hiring Performance
                             </h4>
                             {hasHires ? (
-                                <ResponsiveContainer width="100%" height={220}>
+                                <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} width="100%" height={220}>
                                     <AreaChart data={hiringLineData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                         <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
