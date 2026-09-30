@@ -11,16 +11,11 @@ return new class extends Migration
         if (!Schema::hasTable('notifications')) {
             Schema::create('notifications', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained()->onDelete('cascade');
                 $table->string('type');
-                $table->string('title');
-                $table->text('message');
-                $table->json('data')->nullable();
+                $table->morphs('notifiable');
+                $table->text('data');
                 $table->timestamp('read_at')->nullable();
                 $table->timestamps();
-
-                $table->index('user_id');
-                $table->index('read_at');
             });
         }
     }
