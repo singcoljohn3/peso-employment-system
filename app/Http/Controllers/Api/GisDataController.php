@@ -168,6 +168,9 @@ class GisDataController extends Controller
                 ];
             });
 
+        // Show every branch of a company that is currently hiring, not only the branch that posted the job.
+        $establishments = Establishment::shareHiringAcrossBranches($establishments, 'name');
+
         $activeJobs = Job::with(['establishment.barangay', 'barangay', 'skills'])
             ->whereIn('hiring_status', $hiringStatuses)
             ->whereHas('establishment', function ($q) {

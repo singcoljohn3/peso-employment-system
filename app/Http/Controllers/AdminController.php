@@ -629,6 +629,9 @@ class AdminController extends Controller
                 ];
             });
 
+        // Show every branch of a company that is currently hiring, not only the branch that posted the job.
+        $establishments = Establishment::shareHiringAcrossBranches($establishments, 'company_name');
+
         $barangays = Barangay::select('id', 'barangay_name', 'latitude', 'longitude')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
