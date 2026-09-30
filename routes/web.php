@@ -437,6 +437,8 @@ Route::middleware(['auth', 'agency'])->prefix('agency')->group(function () {
         ->name('agency.members.resume-builder');
     Route::put('/members/{jobSeeker}/resume-builder', [App\Http\Controllers\AgencyController::class, 'saveMemberResume'])
         ->name('agency.members.resume-builder.save');
+    Route::put('/members/{jobSeeker}/resume-editor', [App\Http\Controllers\AgencyController::class, 'saveMemberResumeDocument'])
+        ->name('agency.members.resume-editor.save');
     Route::post('/members/{jobSeeker}/resume-preview', [App\Http\Controllers\AgencyController::class, 'memberResumeLivePreview'])
         ->name('agency.members.resume-preview');
     Route::post('/members/{jobSeeker}/resume/photo', [App\Http\Controllers\AgencyController::class, 'updateMemberResumePhoto'])
@@ -489,6 +491,11 @@ Route::middleware(['auth', 'job_seeker'])->group(function () {
             'templateKeys' => array_keys(\App\Services\ResumeService::TEMPLATES),
         ]);
     })->name('jobseeker.resume');
+
+    Route::get('/jobseeker/resume/editor', [App\Http\Controllers\JobSeekerResumeEditorController::class, 'edit'])
+        ->name('jobseeker.resume.editor');
+    Route::put('/jobseeker/resume/editor', [App\Http\Controllers\JobSeekerResumeEditorController::class, 'update'])
+        ->name('jobseeker.resume.editor.save');
 
     Route::get('/jobseeker/map', function () {
         $user = Auth::user();

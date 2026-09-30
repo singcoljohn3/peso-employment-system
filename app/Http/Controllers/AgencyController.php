@@ -18,6 +18,7 @@ use App\Services\AgencyApprovalService;
 use App\Services\DashboardAnalyticsService;
 use App\Services\ResumeService;
 use App\Services\ResumeBuilderService;
+use App\Services\ResumeEditorService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -1208,40 +1209,30 @@ class AgencyController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $jobSeeker->load(['user', 'barangay']);
+        return Inertia::render('ResumeEditor/Edit', app(ResumeEditorService::class)->pageProps(
+            $jobSeeker,
+            route('agency.members.resume-editor.save', $jobSeeker->id, false),
+            route('agency.members', [], false),
+            'Members',
+        ));
+    }
 
-        $builder = app(ResumeBuilderService::class);
-        $record = $builder->findRecord($jobSeeker);
-        $template = $builder->resolveTemplate($jobSeeker);
-        $content = $builder->buildContent($jobSeeker);
-        $design = $builder->normaliseDesignOptions($record?->design_options);
+    /**
+     * Save the visual resume editor document for a member.
+     */
+    public function saveMemberResumeDocument(Request $request, JobSeeker $jobSeeker)
+    {
+        $agency = $this->resolveAgencyForCurrentUser();
 
-        $templates = [];
-        foreach (ResumeService::TEMPLATES as $key => $label) {
-            $templates[] = ['key' => $key, 'label' => $label];
+        if (!$agency || !$this->isAgencyMember($agency, $jobSeeker)) {
+            return response()->json(['error' => 'Unauthorized.'], 403);
         }
 
-        return Inertia::render('Agency/MemberResumeBuilder', [
-            'agency' => $agency,
-            'member' => [
-                'id' => $jobSeeker->id,
-                'full_name' => $jobSeeker->full_name,
-                'email' => $jobSeeker->email,
-                'photo_url' => $jobSeeker->photo_url,
-            ],
-            'templates' => $templates,
-            'selectedTemplate' => $template,
-            'content' => $content,
-            'design' => $design,
-            'designOptions' => [
-                'accentColors' => ResumeBuilderService::ACCENT_COLORS,
-                'fonts' => ResumeBuilderService::FONT_OPTIONS,
-                'fontSizes' => ResumeBuilderService::FONT_SIZES,
-                'lineSpacings' => ResumeBuilderService::LINE_SPACINGS,
-                'sections' => ResumeBuilderService::SECTION_LABELS,
-            ],
-            'hasSavedResume' => (bool) $record,
-            'savedAt' => $record?->updated_at?->format('M d, Y g:i A'),
+        $record = app(ResumeEditorService::class)->save($request, $jobSeeker);
+
+        return response()->json([
+            'message' => 'Resume saved.',
+            'saved_at' => $record->updated_at->format('M d, Y g:i A'),
         ]);
     }
 

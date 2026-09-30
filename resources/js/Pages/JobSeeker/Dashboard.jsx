@@ -24,12 +24,12 @@ export default function JobSeekerDashboard() {
                         <p className="text-sm text-slate-500 mt-1">Browse establishments near you</p>
                     </Link>
 
-                    <Link href={route('jobseeker.resume')} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-purple-300 transition-all group">
+                    <Link href={route('jobseeker.resume.editor')} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-purple-300 transition-all group">
                         <div className="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-3 group-hover:bg-purple-200 transition-colors">
                             <FileText className="h-6 w-6 text-purple-600" />
                         </div>
                         <h3 className="font-semibold text-slate-800">My Resume</h3>
-                        <p className="text-sm text-slate-500 mt-1">Manage and download your resume</p>
+                        <p className="text-sm text-slate-500 mt-1">Design, customize and download your resume</p>
                     </Link>
 
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-all cursor-default">

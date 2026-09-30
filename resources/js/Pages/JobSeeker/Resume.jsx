@@ -1,4 +1,4 @@
-import { Head, usePage, router } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import {
     FileText, Download, RefreshCw, CheckCircle,
@@ -151,8 +151,17 @@ export default function JobSeekerResume({ resume, seekerData, templates, templat
                         <h1 className="text-2xl font-bold text-slate-900">My Resume</h1>
                         <p className="mt-1 text-sm text-slate-500">Choose a template, generate, and download your professional resume.</p>
                     </div>
-                    <div className="hidden sm:block">
-                        {getStatusBadge()}
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:block">
+                            {getStatusBadge()}
+                        </div>
+                        <Link
+                            href={route('jobseeker.resume.editor')}
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                        >
+                            <Palette className="h-4 w-4" />
+                            Open Resume Editor
+                        </Link>
                     </div>
                 </div>
 
